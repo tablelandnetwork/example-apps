@@ -114,7 +114,7 @@ export default Vue.extend({
 
       for (let i = 0; i < this.tasks.length; i++) {
         const task = this.tasks[i];
-        this.updateTask({...task, complete: !allChecked})
+        this.updateTask({complete: !allChecked}, task)
       }
     }
   }

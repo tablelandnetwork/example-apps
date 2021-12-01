@@ -15,8 +15,7 @@
     "ethers": "^5.5.1",
     "mijin": "^1.7.3",
     "nuxt": "^2.15.7",
-    "tailwindcss": "^2.2.19",
-    "underscore": "^1.13.1"
+    "tailwindcss": "^2.2.19"
   },
   "devDependencies": {
     "@nuxt/types": "^2.15.7",

@@ -75,13 +75,16 @@ export const getters: GetterTree<RootState, RootState> = {
 //       Maybe also enable something like the MongoDB concept of a write concern?
 
 // track timeout so we can debounce and only run everyonce in a while
-let debounceUpdate;
+let debounceUpdate: any = null;
 // setup a lock incase the update request takes a longtime
-let updateRunning = false;
+let updateRunning: boolean = false;
 
-const sync = function (context) {
+const sync = function (context: any): undefined {
   // wait till the current update is done to send the next one...?
-  if (updateRunning) return setTimeout(() => sync(context), 1000);
+  if (updateRunning) {
+    setTimeout(() => sync(context), 1000);
+    return;
+  }
   if (debounceUpdate) return;
 
   debounceUpdate = setTimeout(async () => {

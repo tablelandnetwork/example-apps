@@ -15,7 +15,13 @@
         </div>
       </div>
       <div class="float-right mt-4 mr-4">
-        <MjButton variant="secondary" :loading="loading" :disabled="metaMaskConnected" @click="connectMetaMask">
+        <MjButton
+          variant="secondary"
+          :loading="loadingMetaMask"
+          :disabled="metaMaskConnected"
+          @click="connectMetaMask"
+          class="float-right"
+        >
           <span v-if="!metaMaskConnected">
             Connect MetaMask <img src="@/static/metamask-fox.svg" alt="MetaMask Fox" class="inline">
           </span>
@@ -24,6 +30,7 @@
             <img src="@/static/metamask-fox.svg" alt="MetaMask Fox" class="inline"> MetaMask Connected
           </span>
         </MjButton>
+        <div v-if="ethAddress" class="mt-2">{{ ethAddress }}</div>
       </div>
     </div>
     <MjDivider class="my-8"></MjDivider>
@@ -72,7 +79,9 @@ export default Vue.extend({
     return {
       tableInit: false as boolean,
       metaMaskConnected: false as boolean,
-      loading: false as boolean
+      loading: false as boolean,
+      loadingMetaMask: false as boolean,
+      ethAddress: null as any
     };
   },
   computed: {
@@ -83,7 +92,7 @@ export default Vue.extend({
   },
   methods: {
     buildTable: function () {
-      if (this.loading) return;
+      if (this.loading || this.loadingMetaMask) return;
 
       if (!this.$store.getters.getProvider()) {
         (this.$refs.toast as any).log('You will need to connect to MetaMask before you can create your Table')
@@ -97,9 +106,9 @@ export default Vue.extend({
       }, 1500);
     },
     connectMetaMask: async function () {
-      if (this.loading) return;
+      if (this.loadingMetaMask) return;
 
-      this.loading = true;
+      this.loadingMetaMask = true;
 
       if (typeof window.ethereum === 'undefined') {
         (this.$refs.toast as any).log('You will need MetaMask Installed to create your Table')
@@ -109,16 +118,19 @@ export default Vue.extend({
       try {
         await this.$store.dispatch('connectMetaMask', {ethereum: window.ethereum});
 
-        const blockNumber = await this.$store.getters.getProvider().getBlockNumber();
+        const provider = this.$store.getters.getProvider();
+
+        await provider.send("eth_requestAccounts", []);
+        this.ethAddress = await this.$store.getters.getSigner().getAddress()
 
         this.metaMaskConnected = true;
-        (this.$refs.toast as any).log('Connected to MetaMask! If you\'re curious we\'re at Block Number: ' + blockNumber);
+        (this.$refs.toast as any).log('Connected to MetaMask!');
       } catch (err) {
         console.log(err);
         (this.$refs.toast as any).log('Darn! Having trouble connecting to MetaMask.  You\'ll need to connect before we can build your Todos Table');
       }
 
-      this.loading = false;
+      this.loadingMetaMask = false;
     }
   }
 });
