@@ -17,12 +17,12 @@ export const state = function () {
   return {
     provider: undefined,
     signer: undefined,
+    ethAddress: undefined,
     // TODO: latency is potentially an issue, here I took an approach of keeping a local record of
     //       the state that makes the UI/UX snappy.  This has a downside of needing to manage
     //       this state and the Tableland state.
     //       See below for more thoughts on this.
-    tasks: [] as Task[],
-    tablelandTasks: [] as Task[]
+    tasks: [] as Task[]
   };
 };
 
@@ -65,48 +65,6 @@ export const getters: GetterTree<RootState, RootState> = {
 };
 
 
-// TODO: This presents an interesting choice in our design.
-//       Will dApps that use Tableland potentially want to do some kind of queueing of
-//       update requests so that clicks don't hammer validators? Might be especially nice if we implement
-//       some sort of micro payment.
-//       If the `@textile/tableland` lib can manage this for the dApp Devs they might appreciate it?
-//       Maybe we choose a reasonable default then enable setting the frequency of syncs to the Tableland
-//       Table in the library init options?  e.g. `const tableland = new Tableland({updateFreq: 15 * 60 * 1000})`
-//       Maybe also enable something like the MongoDB concept of a write concern?
-
-// track timeout so we can debounce and only run everyonce in a while
-let debounceUpdate: any = null;
-// setup a lock incase the update request takes a longtime
-let updateRunning: boolean = false;
-
-const sync = function (context: any): undefined {
-  // wait till the current update is done to send the next one...?
-  if (updateRunning) {
-    setTimeout(() => sync(context), 1000);
-    return;
-  }
-  if (debounceUpdate) return;
-
-  debounceUpdate = setTimeout(async () => {
-    updateRunning = true;
-    try {
-      // simulate it taking 7 seconds to get a response from Tableland, what is a realistic number?
-      // 2 seconds? 7 minutes? an hour?
-      await wait(7000);
-
-      await context.commit('set', {
-        key: 'tablelandTasks',
-        value: context.state.tasks
-      });
-    } catch (err) {
-      console.log(err);
-    }
-    updateRunning = false;
-    debounceUpdate = null;
-  // send an updates once every 2 seconds at most, if there's a micro payment mechanism this could be made much longer to save $$
-  }, 2000);
-};
-
 export const actions: ActionTree<RootState, RootState> = {
   connectMetaMask: async function (context, params: {ethereum: any}) {
     console.log('connection to MetaMask...');
@@ -118,6 +76,26 @@ export const actions: ActionTree<RootState, RootState> = {
     if (!unObservable.signer) {
       unObservable.signer = unObservable.provider.getSigner();
     }
+
+    const provider = unObservable.provider
+    const signer = unObservable.signer
+
+    await provider.send("eth_requestAccounts", []);
+
+    const ethAddress = signer.getAddress();
+    context.commit('set', {key: 'ethAddress', value: ethAddress});
+
+    // TODO: get nonce from?
+    //       this may be where we determine if the table exists or not.  If it exists we will get the nonce from the 
+    //       tableland registry (or the validator, I don't know the answer to this)
+    //       if the nonce doesn't exist then this pubkey hasn't got a table yet so we will create the table in the tableland registry
+    //       then in the validator
+    const nonce = getNonce();
+    const msg = await signer.signMessage(nonce);
+
+    // TODO: send message to?
+    //       do we send this to the validator?
+    console.log(msg)
   },
   // TODO: send off async request to Tableland
   createTask: async function (context) {
@@ -126,8 +104,6 @@ export const actions: ActionTree<RootState, RootState> = {
     const newTasks = context.state.tasks.concat([task]);
 
     context.commit('set', {key: 'tasks', value: newTasks});
-
-    sync(context);
 
     return task;
   },
@@ -140,16 +116,12 @@ export const actions: ActionTree<RootState, RootState> = {
     });
 
     context.commit('set', {key: 'tasks', value: newTasks});
-
-    sync(context);
   },
   // TODO: send off async request to Tableland
   deleteTask: async function (context, task: Task) {
     const newTasks = context.state.tasks.filter((t: Task) => t.id !== task.id);
 
     context.commit('set', {key: 'tasks', value: newTasks});
-
-    sync(context);
   }
 };
 
@@ -165,3 +137,11 @@ const getNextId = function (tasks: Task[]) {
 
   return (lastId || 0) + 1;
 };
+
+const getNonce = function () {
+  return getIntStr() + getIntStr() + getIntStr() + getIntStr() + getIntStr();
+};
+
+const getIntStr = function () {
+  return Math.ceil(Math.random() * 10).toString();
+}

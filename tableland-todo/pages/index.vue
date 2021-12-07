@@ -1,61 +1,77 @@
 <template>
   <MjContainer>
-    <div class="ml-4 mt-8">
-      <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
-      <div class="relative inline h-20 w-20 mr-10">
-        <div class="absolute -bottom-10 -left-5 font-bold">
-          ableland
+    <div class="ml-4 mt-8 flex justify-between">
+      <div>
+        <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
+        <div class="relative inline h-20 w-20 mr-10">
+          <div class="absolute -bottom-10 -left-5 font-bold">
+            ableland
+          </div>
+        </div>
+        <span class="mr-8"></span>
+        <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
+        <div class="relative inline h-20 w-20 mr-10">
+          <div class="absolute -bottom-10 -left-5 font-bold">
+            odos
+          </div>
         </div>
       </div>
-      <span class="mr-8"></span>
-      <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
-      <div class="relative inline h-20 w-20 mr-10">
-        <div class="absolute -bottom-10 -left-5 font-bold">
-          odos
-        </div>
-      </div>
-      <div class="float-right mt-4 mr-4">
-        <MjButton
-          variant="secondary"
-          :loading="loadingMetaMask"
-          :disabled="metaMaskConnected"
-          @click="connectMetaMask"
-          class="float-right"
-        >
-          <span v-if="!metaMaskConnected">
-            Connect MetaMask <img src="@/static/metamask-fox.svg" alt="MetaMask Fox" class="inline">
-          </span>
 
-          <span v-if="metaMaskConnected">
-            <img src="@/static/metamask-fox.svg" alt="MetaMask Fox" class="inline"> MetaMask Connected
+      <div class="mt-4 mr-4">
+        <MjRow>
+          <MjButton
+            variant="secondary"
+            :loading="loadingMetaMask"
+            :disabled="metaMaskConnected"
+            @click="connectMetaMask"
+            class="float-right"
+          >
+            <span v-if="!metaMaskConnected">
+              Connect MetaMask <img src="@/static/metamask-fox.svg" alt="MetaMask Fox" class="inline">
+            </span>
+
+            <span v-if="metaMaskConnected">
+              <img src="@/static/metamask-fox.svg" alt="MetaMask Fox" class="inline"> MetaMask Connected
+            </span>
+          </MjButton>
+        </MjRow>
+        <div class="mt-2 w-60 h-8 truncate text-gray-500">
+          <span v-if="ethAddress">
+            ETH Addr: {{ ethAddress }}
           </span>
-        </MjButton>
-        <div v-if="ethAddress" class="mt-2">{{ ethAddress }}</div>
+        </div>
       </div>
     </div>
     <MjDivider class="my-8"></MjDivider>
 
-    <div v-if="!tableInit">
+    <div v-if="!metaMaskConnected">
       <MjHeadline :size="2" class="font-bold mt-16 m-8">Howdy, Yonder Lies Tableland</MjHeadline>
       <MjHeadline :size="4" class="text-center">
-        To get started you'll need to build your first table. As a proof of concept we are going to make a to-do list tracker
+        To get started you'll need to connect to Metamask so we know who you are.  Please use the button in the page header to connect by signing a nonce.
       </MjHeadline>
-      <div class="mx-auto mt-4 w-48">
+    </div>
+
+    <div v-if="metaMaskConnected && !tableInit">
+      <MjHeadline :size="2" class="font-bold mt-16 m-8">Looks like you're new to Tableland</MjHeadline>
+      <MjHeadline :size="4" class="text-center">
+        Now that you are connected to Metamask let's create a to-do list.  You'll need to create your first Table in the Tableland Registry, then we will signal to the Validator to create your Table.
+      </MjHeadline>
+      <div class="mx-auto mt-4 w-64">
         <MjButton size="lg" :loading="loading" @click="buildTable">
-          Get Started
+          Create Todo List
         </MjButton>
       </div>
     </div>
 
-    <MjRow v-if="tableInit">
-      <MjRowItem class="w-2/3">
-        <div class="p-4 shadow rounded-l">
+    <MjRow v-if="metaMaskConnected && tableInit">
+      <MjRowItem class="w-2/3 p-2">
+        <div class="p-4 shadow rounded">
           <Todos></Todos>
         </div>
       </MjRowItem>
 
-      <MjRowItem class="w-1/3">
-        <div class="p-4 shadow rounded-r">
+      <MjRowItem class="w-1/3 p-2">
+        <div class="p-4 shadow rounded">
           <TableViewer></TableViewer>
         </div>
       </MjRowItem>
@@ -117,11 +133,6 @@ export default Vue.extend({
 
       try {
         await this.$store.dispatch('connectMetaMask', {ethereum: window.ethereum});
-
-        const provider = this.$store.getters.getProvider();
-
-        await provider.send("eth_requestAccounts", []);
-        this.ethAddress = await this.$store.getters.getSigner().getAddress()
 
         this.metaMaskConnected = true;
         (this.$refs.toast as any).log('Connected to MetaMask!');
