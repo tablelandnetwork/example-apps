@@ -18,15 +18,20 @@
     "tailwindcss": "^2.2.19"
   },
   "devDependencies": {
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.4",
+    "@babel/preset-typescript": "^7.16.0",
+    "@nuxt/test-utils": "^0.2.2",
     "@nuxt/types": "^2.15.7",
     "@nuxt/typescript-build": "^2.1.0",
     "@nuxtjs/tailwindcss": "^4.2.0",
     "@vue/test-utils": "^1.2.1",
     "babel-core": "7.0.0-bridge.0",
-    "babel-jest": "^27.0.5",
-    "jest": "^27.0.5",
+    "babel-jest": "^27.4.2",
+    "flush-promises": "^1.0.2",
+    "jest": "^27.4.3",
     "postcss": "^8.3.5",
-    "ts-jest": "^27.0.3",
-    "vue-jest": "^3.0.4"
+    "ts-jest": "^27.1.0",
+    "vue-jest": "^3.0.7"
   }
 }

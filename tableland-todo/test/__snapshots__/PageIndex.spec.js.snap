@@ -1,0 +1,131 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Index Page renders correctly 1`] = `
+<div
+  class="container mx-auto"
+>
+  <div
+    class="ml-4 mt-8 flex justify-between"
+  >
+    <div>
+      <img
+        alt="TODO: get a tableland logo"
+        class="w-20 inline"
+        src="@/static/logo.svg"
+      />
+       
+      <div
+        class="relative inline h-20 w-20 mr-10"
+      >
+        <div
+          class="absolute -bottom-10 -left-5 font-bold"
+        >
+          
+          ableland
+        
+        </div>
+      </div>
+       
+      <span
+        class="mr-8"
+      />
+       
+      <img
+        alt="TODO: get a tableland logo"
+        class="w-20 inline"
+        src="@/static/logo.svg"
+      />
+       
+      <div
+        class="relative inline h-20 w-20 mr-10"
+      >
+        <div
+          class="absolute -bottom-10 -left-5 font-bold"
+        >
+          
+          odos
+        
+        </div>
+      </div>
+    </div>
+     
+    <div
+      class="mt-4 mr-4"
+    >
+      <div
+        class="flex"
+      >
+        <button
+          class="relative leading-tight font-button border transition-colors duration-150 focus:outline-none shadow-sm border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-gray-500 dark:active:border-gray-300 cursor-pointer  px-5 py-2 rounded-button float-right"
+          type="button"
+        >
+          <!---->
+          <!---->
+          <span
+            class=""
+          >
+            <span>
+              
+            Connect MetaMask 
+              <img
+                alt="MetaMask Fox"
+                class="inline"
+                src="@/static/metamask-fox.svg"
+              />
+            </span>
+             
+            <!---->
+          </span>
+          <!---->
+        </button>
+      </div>
+       
+      <div
+        class="mt-2 w-60 h-8 truncate text-gray-500"
+      >
+        <!---->
+      </div>
+    </div>
+  </div>
+   
+  <hr
+    class="border-gray-200 dark:border-gray-800 my-8"
+  />
+   
+  <div>
+    <h1
+      class="leading-tight text-2xl sm:text-3xl md:text-4xl font-bold mt-16 m-8"
+    >
+      Howdy, Yonder Lies Tableland
+    </h1>
+     
+    <h1
+      class="leading-tight text-lg sm:text-xl text-center"
+    >
+      
+      To get started you'll need to connect to Metamask so we know who you are.  Please use the button in the page header to connect by signing a nonce.
+    
+    </h1>
+  </div>
+   
+  <!---->
+   
+  <!---->
+   
+  <div
+    class="fixed z-40 w-full sm:w-96 left-0 top-0"
+  >
+    <transition-group-stub
+      class="inline-block w-full"
+      enteractiveclass="transition ease-out-mijin duration-200"
+      enterclass="transform -translate-y-3 opacity-0"
+      entertoclass="transform translate-y-0 opacity-100"
+      leaveactiveclass="transition ease-in-mijin duration-200 absolute w-full"
+      leaveclass="transform translate-y-0 opacity-100"
+      leavetoclass="transform -translate-y-1/4 opacity-0"
+      moveclass="ease-in-out-mijin duration-200"
+      tag="ul"
+    />
+  </div>
+</div>
+`;

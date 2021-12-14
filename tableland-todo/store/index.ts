@@ -1,5 +1,6 @@
 import { ActionTree, GetterTree, MutationTree } from 'vuex';
 import { ethers } from 'ethers';
+import { connect, createTable, runQuery } from '@textile/js-tableland';
 
 declare global {
     interface Window {
@@ -68,7 +69,15 @@ export const getters: GetterTree<RootState, RootState> = {
 export const actions: ActionTree<RootState, RootState> = {
   connectMetaMask: async function (context, params: {ethereum: any}) {
     console.log('connection to MetaMask...');
+    const { ethAccounts } = await connect('http://tableland.com');
 
+    if (!ethAccounts[0]) createTable();
+    //const select = await runQuery('SELECT * FROM persons');
+    //console.log(select);
+
+    const select = await runQuery('INSERT * FROM persons', ethAccounts[0]);
+    console.log(select);
+    return;
     // Note: hoisting these variables because of above mentioned workaround
     if (!unObservable.provider) {
       unObservable.provider = new ethers.providers.Web3Provider(params.ethereum);
@@ -144,4 +153,4 @@ const getNonce = function () {
 
 const getIntStr = function () {
   return Math.ceil(Math.random() * 10).toString();
-}
+};
