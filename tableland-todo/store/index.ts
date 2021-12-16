@@ -16,13 +16,9 @@ export interface Task {
 
 export const state = function () {
   return {
-    provider: undefined,
-    signer: undefined,
     ethAddress: undefined,
-    // TODO: latency is potentially an issue, here I took an approach of keeping a local record of
-    //       the state that makes the UI/UX snappy.  This has a downside of needing to manage
-    //       this state and the Tableland state.
-    //       See below for more thoughts on this.
+    allTables: [] as any[],
+    currentTable: undefined,
     tasks: [] as Task[]
   };
 };
@@ -37,74 +33,54 @@ interface KeyVal {
 export const mutations: MutationTree<RootState> = {
   set: function (state: any, data: KeyVal) {
     state[data.key] = data.value;
-  },
-  // NOTE: ethers uses an Object with circular reference for signer and provider, so they can't be kept in reactive state
-  //       for now workaround is to use private props + getter, and don't bother making these props reactive
-  setUnObservable: function (state: any, data: KeyVal) {
-    if (unObservable.hasOwnProperty(data.key)) {
-      unObservable[data.key] = data.value;
-    }
   }
 };
 
-const unObservable = {
-  signer: undefined,
-  provider: undefined
-} as {
-  [key: string]: any | undefined;
-  signer: any | undefined;
-  provider: any | undefined;
-};
-
-export const getters: GetterTree<RootState, RootState> = {
-  getProvider: function () {
-    return () => unObservable.provider;
-  },
-  getSigner: function () {
-    return () => unObservable.signer;
-  }
-};
-
+const mockData = {
+  allTables: [] as any[],
+  currentTable: {} as any,
+  tasks: [] as Task[]
+}
 
 export const actions: ActionTree<RootState, RootState> = {
-  connectMetaMask: async function (context, params: {ethereum: any}) {
-    console.log('connection to MetaMask...');
-    const { ethAccounts } = await connect('http://tableland.com');
+  connect: async function (context, params: {ethereum: any}) {
+    // connect to tableland
+    const res = await connect('http://tableland.com');
+    console.log(res);
+    const { ethAccounts } = res;
 
-    if (!ethAccounts[0]) createTable();
-    //const select = await runQuery('SELECT * FROM persons');
-    //console.log(select);
+    // save the user's eth account address
+    context.commit('set', {key: 'ethAddress', value: ethAccounts[0]});
 
-    const select = await runQuery('INSERT * FROM persons', ethAccounts[0]);
-    console.log(select);
+    // get all of the user's existing tables
+    await context.dispatch('loadTables');
+  },
+  createTable: async function (context, params) {
+    mockData.allTables.push({name: params.name, tableId: Math.ceil(100000 * Math.random())});
     return;
-    // Note: hoisting these variables because of above mentioned workaround
-    if (!unObservable.provider) {
-      unObservable.provider = new ethers.providers.Web3Provider(params.ethereum);
+    // TODO: table.js not finished
+    await createTable(params.name);
+
+    // refresh the list of all of the user's existing tables
+    await context.dispatch('loadTables');
+  },
+  loadTables: async function (context) {
+    const tables: any = await runQuery(`SELECT * FROM "system_tables" WHERE controller = '${context.state.ethAddress}'`);
+
+    if (tables.error) {
+      console.log(tables.error);
+      context.commit('set', {key: 'allTables', value: []});
+      return;
     }
-    if (!unObservable.signer) {
-      unObservable.signer = unObservable.provider.getSigner();
-    }
 
-    const provider = unObservable.provider
-    const signer = unObservable.signer
+    // Save there their tables for later, if a table doesn't exist they can use the button to create a table...
+    context.commit('set', {key: 'allTables', value: tables || []});
+  },
+  loadTable: async function (context, params) {
+    const tasks = await runQuery(`SELECT * FROM ${params.tableId}`);
 
-    await provider.send("eth_requestAccounts", []);
-
-    const ethAddress = signer.getAddress();
-    context.commit('set', {key: 'ethAddress', value: ethAddress});
-
-    // TODO: get nonce from?
-    //       this may be where we determine if the table exists or not.  If it exists we will get the nonce from the 
-    //       tableland registry (or the validator, I don't know the answer to this)
-    //       if the nonce doesn't exist then this pubkey hasn't got a table yet so we will create the table in the tableland registry
-    //       then in the validator
-    const nonce = getNonce();
-    const msg = await signer.signMessage(nonce);
-
-    // TODO: send message to?
-    //       do we send this to the validator?
-    console.log(msg)
+    context.commit('set', {key: 'tasks', value: tasks || []});
+    context.commit('set', {key: 'currentTable', value: params.tableId});
   },
   // TODO: send off async request to Tableland
   createTask: async function (context) {
