@@ -156,11 +156,6 @@ export default Vue.extend({
 
       this.loading = true;
 
-      if (typeof window.ethereum === 'undefined') {
-        (this.$refs.toast as any).log('You will need MetaMask Installed to use Tableland Todos')
-        return;
-      }
-
       try {
         await this.$store.dispatch('connect');
 

@@ -1,6 +1,7 @@
 <template>
   <div class="flex items-top items-center sm:pt-0">
     <MjContainer class="text-center">
+      <MjHeadline>{{ listName }}</MjHeadline>
       <div class="my-4 mx-auto w-64 h-6">
         <div class="text-left">
           <MjTransitionFadeY
@@ -77,7 +78,8 @@ export default Vue.extend({
     },
     tasks: (state: any): Task[] => {
       return state.tasks;
-    }
+    },
+    listName: (state: any) => state.currentListName
   }),
   methods: {
     createTask: async function () {

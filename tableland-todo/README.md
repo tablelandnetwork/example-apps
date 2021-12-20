@@ -17,13 +17,17 @@ quickstart:
 # install dependencies
 $ npm install
 
+# set vakudator address, default is http://localhost:8545
+$ export VALIDATOR=http://tableland.com
+
 # serve with hot reload at localhost:3000
 $ npm run dev
 
-# build for production and launch server
-$ npm run build
-$ npm run start
-
 # generate static project
 $ npm run generate
+
+# after generate serve the static project locally
+$ npx nuxt start
 ```
+
+

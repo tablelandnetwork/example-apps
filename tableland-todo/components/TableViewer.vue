@@ -18,9 +18,9 @@
         </MjTableHead>
 
         <MjTableBody>
-          <MjTableRow v-for="table in allTables" :key="table.tableId" clickable>
-            <MjTableCell @click="loadTable(table)">
-              {{ table.tableId }}
+          <MjTableRow v-for="table in allTables" :key="table.uuid" clickable @click="loadTable(table)">
+            <MjTableCell>
+              {{ table.list_name }}
             </MjTableCell>
           </MjTableRow>
         </MjTableBody>
@@ -43,7 +43,7 @@ export default Vue.extend({
   },
   computed: {
     ...mapState({
-      currentTable: state => state.currentTable,
+      currentTable: (state: any) => state.currentTable,
       allTables: (state: any) => state.allTables
     })
   },
@@ -56,8 +56,8 @@ export default Vue.extend({
       const table = await this.$store.dispatch('createTable', {name: this.newName});
       this.loading = false;
     },
-    loadTable: async function (table) {
-      await this.$store.dispatch('loadTable', {tableId: table.tableId})
+    loadTable: async function (table: any) {
+      await this.$store.dispatch('loadTable', {tableId: table.uuid, name: table.list_name});
     }
   }
 });
