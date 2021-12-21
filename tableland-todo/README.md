@@ -17,7 +17,7 @@ quickstart:
 # install dependencies
 $ npm install
 
-# set vakudator address, default is http://localhost:8545
+# set validator address, default is http://localhost:8545
 $ export VALIDATOR=http://tableland.com
 
 # serve with hot reload at localhost:3000

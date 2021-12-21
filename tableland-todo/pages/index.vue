@@ -46,8 +46,10 @@
 
     <MjContainer v-if="!tablelandConnected">
       <MjHeadline :size="2" class="font-bold mt-16 m-8">Howdy, Yonder Lies Tableland</MjHeadline>
-      <MjHeadline :size="4" class="text-center">
-        To get started you'll need to connect to Tableland so we know who you are.  This will connect you to Metamask, if you're not already, then we will find any tables you might have already created and let you create new ones too!
+      <MjHeadline :size="4">
+        To get started you'll need to connect to Tableland, which will require you to sign a JWT using MetaMask. Once you're connected we will know if you've been here before.<br>
+        If you've been here before we will load your lists.<br>
+        If you haven't we will need you to pay the gas costs to build a table that tracks your lists.  Then you will pay the gas costs to build each of the lists you create.
       </MjHeadline>
       <MjRow class="justify-center">
         <MjButton

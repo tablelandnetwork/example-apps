@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-top items-center sm:pt-0">
-    <MjContainer class="text-center">
+    <MjContainer v-if="listName" class="text-center">
       <MjHeadline>{{ listName }}</MjHeadline>
       <div class="my-4 mx-auto w-64 h-6">
         <div class="text-left">
@@ -54,6 +54,36 @@
           New Task
         </MjButton>
       </div>
+
+      <div v-if="deletedTasks.length" class="m-auto w-64 text-center">
+        <MjLink v-if="!showingDeleted" @click="showDeleted" color="gray" class="cursor-pointer">
+          show deleted
+        </MjLink>
+        <MjLink v-if="showingDeleted" @click="hideDeleted" color="gray" class="cursor-pointer">
+          hide deleted
+        </MjLink>
+      </div>
+
+      <div v-if="showingDeleted" v-for="task in deletedTasks" :key="task.id" class="m-auto w-64">
+        <div class="flex">
+          <MjCheckbox
+            :options="task.complete"
+            disabled
+            class="flex self-center mr-4"
+          >
+          </MjCheckbox>
+          <MjInput
+            :value="task.name"
+            disabled
+            placeholder="Choose a name..."
+            :ref="'task-' + task.id"
+          >
+            <template #icon #suffix>
+              <MjIcon name="edit-2"></MjIcon>
+            </template>
+          </MjInput>
+        </div>
+      </div>
     </MjContainer>
   </div>
 </template>
@@ -69,17 +99,21 @@ import { Task, RootState } from '@/store/index';
 export default Vue.extend({
   data: function () {
     return {
-      loading: false
+      loading: false,
+      showingDeleted: false
     }
   },
   computed: mapState({
-    allChecked: (state: any) => {
-      return state.tasks.length === state.tasks.filter((task: Task) => task.complete).length;
+    allChecked: function (state: any) {
+      return this.tasks.length === this.tasks.filter((task: Task) => task.complete).length;
     },
     tasks: (state: any): Task[] => {
-      return state.tasks;
+      return state.tasks.filter((task: Task) => !task.deleted);
     },
-    listName: (state: any) => state.currentListName
+    deletedTasks: (state: any): Task[] => {
+      return state.tasks.filter((task: Task) => task.deleted);
+    },
+    listName: (state: any) => state.currentTableName
   }),
   methods: {
     createTask: async function () {
@@ -110,14 +144,20 @@ export default Vue.extend({
         console.log(err);
       }
     },
-    toggleAll: function () {
+    toggleAll: async function () {
       console.log('toggle');
       const allChecked = this.allChecked;
 
       for (let i = 0; i < this.tasks.length; i++) {
         const task = this.tasks[i];
-        this.updateTask({complete: !allChecked}, task)
+        await this.updateTask({complete: !allChecked}, task)
       }
+    },
+    showDeleted: async function () {
+      this.showingDeleted = true;
+    },
+    hideDeleted: function () {
+      this.showingDeleted = false;
     }
   }
 });

@@ -43,7 +43,6 @@ export default Vue.extend({
   },
   computed: {
     ...mapState({
-      currentTable: (state: any) => state.currentTable,
       allTables: (state: any) => state.allTables
     })
   },
