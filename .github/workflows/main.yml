@@ -7,31 +7,16 @@ jobs:
   deploy: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
     steps:
-      - name: setup python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: setup node
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: build
-        working-directory: ./docs
-        run: |
-          ./scripts/setup
-          ./scripts/build
       - name: push # push to a known bucket
         id: bucket
-        working-directory: ./docs
+        working-directory: ./tableland-todo
         uses: textileio/github-action-buckets@master
         with:
           key: ${{ secrets.BUCKET_KEY }}
           secret: ${{ secrets.BUCKET_SECRET }}
           bucket: "bafzbeigunr7rw7weammzaqryofc3ya3raw7lilnvchg4vf6h5xgcjbwuhi"
           thread: "bafk4ruiez2yyfjxytdmavnwa2vd4pq75ac44baxcan4hwe24sqdiyqi"
-          path: "tableland-todo/dist"
+          path: "./tableland-todo/dist"
           pattern: "**/*"
       - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
       - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
