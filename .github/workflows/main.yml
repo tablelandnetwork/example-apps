@@ -1,0 +1,32 @@
+name: "Textile Bucket - Deploy"
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  bucket_push:
+    runs-on: ubuntu-latest
+    name: push textile bucket
+    steps:
+    - name: push action
+      id: bucket
+      uses: textileio/github-action-buckets@master
+      with:
+        key: ${{ secrets.TEXTILE_ACCOUNT_KEY }}
+        secret: ${{ secrets.TEXTILE_ACCOUNT_SECRET }}
+        bucket: 'tableland-todo'
+        thread: ''
+        path: 'tableland-todo/dist'
+    # Use the output from the `hello` step
+    - run: echo "bucket key: ${{ steps.bucket.outputs.key }}"
+    - run: echo "ipfs: ${{ steps.bucket.outputs.ipfs }}"
+    - run: echo "ipfs link: ${{ steps.bucket.outputs.ipfsUrl }}"
+    - run: echo "ipns: ${{ steps.bucket.outputs.ipns }}"
+    - run: echo "ipns link: ${{ steps.bucket.outputs.ipnsUrl }}"
+    - run: echo "hub: ${{ steps.bucket.outputs.hub }}"
+    - run: echo "www: ${{ steps.bucket.outputs.www }}"
+    
