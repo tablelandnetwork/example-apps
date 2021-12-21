@@ -69,7 +69,8 @@ typings/
 .nuxt
 
 # Nuxt generate
-dist
+# Not ignoring dist cause our dependencies are private and we need to commit the build
+#dist
 
 # vuepress build output
 .vuepress/dist
