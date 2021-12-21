@@ -2,10 +2,10 @@ name: "Textile Bucket - Deploy"
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   bucket_push:
@@ -19,7 +19,7 @@ jobs:
         key: ${{ secrets.TEXTILE_ACCOUNT_KEY }}
         secret: ${{ secrets.TEXTILE_ACCOUNT_SECRET }}
         bucket: 'tableland-todo'
-        thread: ''
+        thread: 'bafkyusjf6fdhzkub3fstqvdvis2nrpwxcefzeo3wtfw5wag37y3jz5q'
         path: 'tableland-todo/dist'
     # Use the output from the `hello` step
     - run: echo "bucket key: ${{ steps.bucket.outputs.key }}"

@@ -50,7 +50,12 @@ export default {
 
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [
+    '~/modules/nuxt-module-ipfs'
   ],
+
+  router: {
+    base: process.env.NODE_ENV === 'development' ? '/' : '/ipfs/hash/'
+  },
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
