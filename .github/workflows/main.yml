@@ -2,7 +2,7 @@ name: "Textile Bucket - Deploy"
 on:
   push:
     branches:
-      - master
+      - main
 jobs:
   deploy: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
