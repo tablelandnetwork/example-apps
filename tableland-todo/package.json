@@ -16,7 +16,8 @@
     "ethers": "^5.5.1",
     "mijin": "^1.7.3",
     "nuxt": "^2.15.7",
-    "tailwindcss": "^2.2.19"
+    "tailwindcss": "^2.2.19",
+    "underscore": "^1.13.2"
   },
   "devDependencies": {
     "@babel/core": "^7.16.0",
@@ -26,6 +27,7 @@
     "@nuxt/types": "^2.15.7",
     "@nuxt/typescript-build": "^2.1.0",
     "@nuxtjs/tailwindcss": "^4.2.0",
+    "@types/underscore": "^1.11.4",
     "@vue/test-utils": "^1.2.1",
     "babel-core": "7.0.0-bridge.0",
     "babel-jest": "^27.4.2",

@@ -32,7 +32,7 @@
             </MjCheckbox>
             <MjInput
               :value="task.name"
-              @input="val => updateTask({name: val}, task)"
+              @blur="eve => updateTask({name: eve.currentTarget.value}, task)"
               placeholder="Choose a name..."
               :ref="'task-' + task.id"
             >
@@ -96,11 +96,13 @@ import { mapState } from 'vuex';
 // types
 import { Task, RootState } from '@/store/index';
 
+const delay = 3000;
 export default Vue.extend({
   data: function () {
     return {
       loading: false,
-      showingDeleted: false
+      showingDeleted: false,
+      debounceTimeout: undefined
     }
   },
   computed: mapState({
@@ -131,11 +133,16 @@ export default Vue.extend({
       }
     },
     updateTask: async function (update: any, task: Task) {
+      clearTimeout(this.debounceTimeout);
       try {
         await this.$store.dispatch('updateTask', {...task, ...update});
       } catch (err) {
         console.log(err);
       }
+    },
+    updateTaskDebounce: function (update: any, task: Task) {
+      clearTimeout(this.debounceTimeout);
+      this.debounceTimeout = setTimeout(async () => this.updateTask(update, task), delay) as any;
     },
     deleteTask: async function (task: Task) {
       try {
