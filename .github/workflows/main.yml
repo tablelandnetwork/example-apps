@@ -9,7 +9,6 @@ jobs:
     steps:
       - name: push # push to a known bucket
         id: bucket
-        working-directory: ./tableland-todo
         uses: "textileio/github-action-buckets@master"
         with:
           key: ${{ secrets.BUCKET_KEY }}
