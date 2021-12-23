@@ -2,10 +2,15 @@
   <MjContainer>
     <MjRow>
       <MjInput placeholder="list name" v-model.trim="newName"></MjInput>
-      <MjButton class="ml-2" :loading="loading" :disabled="!newName || loading" @click="createTable" variant="secondary">
+      <MjButton class="ml-2" :loading="loading" :disabled="invalidName || loading" @click="createTable" variant="secondary">
         <MjIcon name="plus"></MjIcon>
         New Todo List
       </MjButton>
+    </MjRow>
+    <MjRow class=py-4>
+      <MjNote v-if="invalidName" variant="danger">
+        Name is not valid. List names must be unique. List names must start with a letter and can only include alphanumeric characters and the underscore.
+      </MjNote>
     </MjRow>
 
     <MjRow class="mt-4">
@@ -42,6 +47,18 @@ export default Vue.extend({
     };
   },
   computed: {
+    invalidName: function () {
+      const name = this.newName;
+      if (!name) return false;
+      if (name.includes(' ')) return true;
+      if (name[0].match(/[^a-zA-Z]/)) return true;
+      if (name.match(/[^a-zA-Z_0-9]/)) return true;
+      if (this.allTables.find((list: any) => list.list_name === name)) {
+        return true;
+      }
+
+      return false;
+    },
     ...mapState({
       allTables: (state: any) => state.allTables
     })
@@ -50,9 +67,12 @@ export default Vue.extend({
     createTable: async function () {
       if (!this.newName) return;
 
+      if (this.invalidName) return;
+
       this.loading = true;
 
       const table = await this.$store.dispatch('createTable', {name: this.newName});
+      this.newName = '';
       this.loading = false;
     },
     loadTable: async function (table: any) {
