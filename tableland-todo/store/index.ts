@@ -43,7 +43,6 @@ export const actions: ActionTree<RootState, RootState> = {
     // connect to tableland
     console.log(`connecting to validator at: ${process.env.validatorHost}`);
     const res = await connect(process.env.validatorHost as string);
-    console.log(res);
     const { ethAccounts } = res;
 
     // save the user's eth account address
@@ -53,7 +52,6 @@ export const actions: ActionTree<RootState, RootState> = {
     await context.dispatch('loadTables');
   },
   createTable: async function (context, params) {
-    console.log('createTable');
     // TODO: table is a variation of a v4 uuid with 0x prepended and no dashes
     const table = await createTable(sql.createTable(params.name));
     const tableId = formatUuid(table.slice(2));
@@ -90,12 +88,10 @@ export const actions: ActionTree<RootState, RootState> = {
       const uuid = tables[i].uuid;
       const listTable = await runQuery(sql.selectListTable(), uuid) as any;
 
-      console.log(listTable);
       // if the uuid matches a table with the right name for this app we will assume it is storing the list names
       // NOTE: this is definitely not a legitimate way to build a dApp since malicious dApps could have created this table
       //       with some sort of bad intent
       if (!listTable.error) {
-        console.log('found list table with uuid: ' + uuid);
         context.commit('set', {key: 'listTableId', value: uuid});
         context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
         listTableExists = true;
@@ -107,7 +103,6 @@ export const actions: ActionTree<RootState, RootState> = {
       const tableIdNoFormat = await createTable(sql.createListTable());
       const listTableId = formatUuid(tableIdNoFormat.slice(2));
 
-      console.log('created list table with uuid: ' + listTableId);
       context.commit('set', {key: 'listTableId', value: listTableId || ''});
       const listTable = await runQuery(sql.selectListTable(), listTableId) as any;
       if (!listTable.error) {
@@ -125,7 +120,6 @@ export const actions: ActionTree<RootState, RootState> = {
     context.commit('set', {key: 'allTables', value: listTables});
   },
   loadTable: async function (context, params: {tableId: string, name: string}) {
-    console.log(params);
     const tableUuid = params.tableId.includes('-') ? params.tableId : formatUuid(params.tableId);
     const res = await runQuery(sql.selectTodoTable(params.name), tableUuid) as any;
 
@@ -148,6 +142,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
     if (res.error) {
       console.log(res.error);
+      await context.dispatch('loadTable', {name: context.state.currentTableName, tableId: context.state.currentTableId});
       return new Error(res.error.message);
     }
 
@@ -155,7 +150,6 @@ export const actions: ActionTree<RootState, RootState> = {
     return task;
   },
   updateTask: async function (context, task: Task) {
-    console.log(task);
     const res = await runQuery(sql.updateTask(context.state.currentTableName, task), context.state.currentTableId) as any;
 
     if (res.error) {
@@ -163,10 +157,11 @@ export const actions: ActionTree<RootState, RootState> = {
       return new Error(res.error.message);
     }
 
+    await wait(750);
+
     await context.dispatch('loadTable', {name: context.state.currentTableName, tableId: context.state.currentTableId});
   },
   deleteTask: async function (context, task: Task) {
-    console.log(task);
     const res = await runQuery(sql.deleteTask(context.state.currentTableName, task.id), context.state.currentTableId) as any;
 
     if (res.error) {
@@ -175,7 +170,6 @@ export const actions: ActionTree<RootState, RootState> = {
     }
 
     await context.dispatch('loadTable', {name: context.state.currentTableName, tableId: context.state.currentTableId});
-    await context.dispatch('loadTableDeleted');
   }
 };
 
@@ -213,7 +207,7 @@ const sql = {
     complete BOOLEAN DEFAULT false,
     name     VARCHAR DEFAULT '',
     deleted  BOOLEAN DEFAULT false,
-    id       SERIAL
+    id       INTEGER UNIQUE
   );`,
   createListTable: () => `CREATE TABLE ${listTableName} (
     list_name VARCHAR NOT NULL,
@@ -233,4 +227,10 @@ const sql = {
   updateTask: (name: string, task: {complete: boolean, name: string, id: number}) => `
     UPDATE ${name} SET complete = ${task.complete}, name = '${task.name}' WHERE id = ${task.id};
   `
+};
+
+const wait = function (ms: number) {
+  return new Promise(function (resolve, reject) {
+    setTimeout(() => resolve(void 0), ms);
+  });
 };

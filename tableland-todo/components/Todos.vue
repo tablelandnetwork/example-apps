@@ -22,17 +22,17 @@
         group
         tag="div"
       >
-        <div v-for="task in tasks" :key="task.id" class="m-auto w-64">
+        <div v-for="task in tasksInMem" :key="task.id" class="m-auto w-64">
           <div class="flex">
             <MjCheckbox
-              :options="task.complete"
+              v-model="task.complete"
               @change="val => updateTask({complete: val}, task)"
               class="flex self-center mr-4"
             >
             </MjCheckbox>
             <MjInput
-              :value="task.name"
-              @blur="eve => updateTask({name: eve.currentTarget.value}, task)"
+              v-model="task.name"
+              @input="val => updateTask({name: val}, task)"
               placeholder="Choose a name..."
               :ref="'task-' + task.id"
             >
@@ -96,13 +96,18 @@ import { mapState } from 'vuex';
 // types
 import { Task, RootState } from '@/store/index';
 
+interface MemTask extends Task {
+  dirty: boolean;
+};
+
 const delay = 3000;
 export default Vue.extend({
   data: function () {
     return {
       loading: false,
       showingDeleted: false,
-      debounceTimeout: undefined
+
+      tasksInMem: [] as MemTask[]
     }
   },
   computed: mapState({
@@ -117,6 +122,18 @@ export default Vue.extend({
     },
     listName: (state: any) => state.currentTableName
   }),
+  watch: {
+    // keeping Flux pattern in place and allowing users to type fast and make updates by
+    // watching changes and updating the ui state as they come back.  This also handles
+    // the 2 browser window problem
+    tasks: function (tasks: any[]) {
+      const update = tasks.map((task: Task) => {
+        return {...task, dirty: false} as MemTask;
+      });
+
+      this.tasksInMem = update;
+    }
+  },
   methods: {
     createTask: async function () {
       try {
@@ -132,31 +149,35 @@ export default Vue.extend({
         console.log(err);
       }
     },
-    updateTask: async function (update: any, task: Task) {
-      clearTimeout(this.debounceTimeout);
+    updateTask: async function (update: any, task: MemTask) {
       try {
+        task.dirty = true;
         await this.$store.dispatch('updateTask', {...task, ...update});
       } catch (err) {
         console.log(err);
       }
     },
-    updateTaskDebounce: function (update: any, task: Task) {
-      clearTimeout(this.debounceTimeout);
-      this.debounceTimeout = setTimeout(async () => this.updateTask(update, task), delay) as any;
-    },
-    deleteTask: async function (task: Task) {
+    deleteTask: async function (task: MemTask) {
       try {
         await this.$store.dispatch('deleteTask', task);
       } catch (err) {
         console.log(err);
       }
     },
+    tasksAreSame: function (a: Task | MemTask, b: Task | MemTask) {
+      if (a.id !== b.id) return false;
+      if (a.name !== b.name) return false;
+      if (a.complete !== b.complete) return false;
+      if (a.deleted !== b.deleted) return false;
+
+      return true;
+    },
     toggleAll: async function () {
       console.log('toggle');
       const allChecked = this.allChecked;
 
-      for (let i = 0; i < this.tasks.length; i++) {
-        const task = this.tasks[i];
+      for (let i = 0; i < this.tasksInMem.length; i++) {
+        const task = this.tasksInMem[i];
         await this.updateTask({complete: !allChecked}, task)
       }
     },
