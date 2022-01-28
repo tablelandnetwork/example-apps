@@ -29,14 +29,14 @@ export const counterSlice = createSlice({
   name: 'lootEquipped',
   initialState: {
     value: [
-        "synthetic",
-        "synthetic",
-        "synthetic",
-        "synthetic",
-        "synthetic",
-        "synthetic",
-        "synthetic",
-        "none"
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
     ] as any
   },
   reducers: {
@@ -44,10 +44,14 @@ export const counterSlice = createSlice({
       let stateOld = _.clone(state);
       state.value = parseEquipped(action.payload.result.data.rows, stateOld);
     },
+    equipItem: (state: any, action:any) => {
+      console.log(action);
+      state.value[action.payload.key] = action.payload.bag;
+    }
   }
 });
 
 // Action creators are generated for each case reducer function
-export const { equipLoot } = counterSlice.actions
+export const { equipLoot, equipItem } = counterSlice.actions
 
 export default counterSlice.reducer;

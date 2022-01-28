@@ -9,7 +9,8 @@ export const counterSlice = createSlice({
   },
   reducers: {
     hydrateLoot: (state, action) => {
-        state.value.push(action.payload);
+        
+        state.value.push(...action.payload);
     },
   }
 });

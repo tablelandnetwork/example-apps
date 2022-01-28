@@ -28,6 +28,18 @@ const slots: Array<string> = [
     "nameSuffixes"
 ];
 
+
+export interface LootBag {
+    id: string | number,
+    items: LootItem[]
+}
+export interface LootItem extends Array<any> {
+    [index: number]: LootComponent
+}
+export interface LootComponent extends Array<any> {
+    [index: number]: string 
+}
+
 function ComponentEnumToObject(item_hex: Array<{_hex: string}>, key: number) {
     const item = item_hex.map(property => {
         return parseInt(property._hex, 16);
@@ -46,7 +58,7 @@ function ComponentEnumToObject(item_hex: Array<{_hex: string}>, key: number) {
 }
 
 
-export async function getLoot() : Promise<Array<Array<string | number>>> {
+export async function getLoot(bags: number[]) : Promise<LootBag[]> {
     const provider = new ethers.providers.Web3Provider((window as any).ethereum, "any");
     const signer = provider.getSigner();
     const sLootContract = new ethers.Contract(synthLoot.address, synthLoot.abi, signer);
@@ -59,37 +71,52 @@ export async function getLoot() : Promise<Array<Array<string | number>>> {
     let userAddress = await signer.getAddress();
     
 
-    // let bag = 1279;
 
+
+    let populatedBags = await bags.map(async (bag): Promise<LootBag> => {
+        let realLootBag = await Promise.all([
+            lootContract.getWeapon(bag),
+            lootContract.getChest(bag),
+            lootContract.getHead(bag),
+            lootContract.getWaist(bag),
+            lootContract.getFoot(bag),
+            lootContract.getHand(bag),
+            lootContract.getNeck(bag),
+            lootContract.getRing(bag)        
+        ]);
     
     
-    // let realLootBag = Promise.all([
-    //     lootContract.getWeapon(bag),
-    //     lootContract.getChest(bag)
-    // ]);
-
-    // function ItemAssignComponents() {
-    //     let it:any = {};
-    //     Object.entries(lootProperties).forEach(lootProperty => {
-    //         lootProperty[1].forEach(lootComponent => {
-    //             let spot = realLoot.search(`("| |$)${lootComponent}("| |$)`);
-    //             if(spot!==-1 && lootComponent!=="") {
-    //                 it[lootProperty[0]] = lootComponent;
-    //                 console.log(lootComponent, lootProperty[0]);
-    //             }
-    //         });
     
-    //         console.log([it.namePrefix, it.nameSuffix, it.base, it.suffix, it.plusOne]);
-    //     })
-    // }
-
-
-
-
+    
+        
+        
+        let realLootBagComponents = realLootBag.map(realLootItem => {
+            let it:any = {};
+            Object.entries(lootProperties).forEach(lootProperty => {
+                lootProperty[1].forEach(lootComponent => {
+                    let spot = realLootItem.search(`("| |^)${lootComponent}("| |$)`);
+                    if(spot!==-1 && lootComponent!=="") {
+                        let prop =  ["namePrefixes", "nameSuffixes", "suffixes"].includes(lootProperty[0]) ? lootProperty[0] : "base"; 
+                        it[prop] = lootComponent;
+                    }
+                });
+        
+                
+            });
+    
+            return [it.namePrefixes, it.nameSuffixes, it.base, it.suffixes, it.plusOne];
+        });
+        return {
+            id: `loot@${bag}`,
+            items: realLootBagComponents
+        }
+    });
+    
+    let populatedResolvedBags = await Promise.all(populatedBags);
 
 
     
-    let items = await Promise.all([
+    let synth = await Promise.all([
         sLootContract.weaponComponents(userAddress),
         sLootContract.chestComponents(userAddress),
         sLootContract.headComponents(userAddress),
@@ -100,5 +127,7 @@ export async function getLoot() : Promise<Array<Array<string | number>>> {
         sLootContract.ringComponents(userAddress)
     ]);
 
-    return items.map(ComponentEnumToObject);
+    populatedResolvedBags.push({id: "synthetic", items: synth.map(ComponentEnumToObject)});
+
+    return populatedResolvedBags;
 }
