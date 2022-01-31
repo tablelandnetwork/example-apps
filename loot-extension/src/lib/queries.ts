@@ -8,3 +8,7 @@ export function InsertOrUpdate(tableId: string, slot: string, bag: string): stri
     return `INSERT INTO ${tableId} as le (slot, bag) VALUES ('${slot}', '${bag}}') 
     ON CONFLICT (slot) DO UPDATE SET bag = '${bag}' WHERE le.slot = '${slot}';`
 }
+
+export function CreateEquippedTable(sig:string) {
+    return `CREATE TABLE LootEquipped_${sig} (id int primary key, slot text unique, bag text)`;
+}

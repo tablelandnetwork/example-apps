@@ -1,5 +1,7 @@
+import { runQuery } from '@textile/tableland';
 import { useSelector, useDispatch } from 'react-redux';
 import { inventorySlots } from '../lib/consts';
+import { InsertOrUpdate } from '../lib/queries';
 import { equipItem } from '../store/lootEquipped';
 
 function InventoryList() {
@@ -32,10 +34,10 @@ function InventoryList() {
           const equippedItemIndex = myLoot.findIndex((bag: any) => bag.id === equippedItem);
           
           const component = myLoot[equippedItemIndex]?.components[key] ?? {name:"Empty"};
-          strength = strength + (component.strength ?? 0)
-          speed = speed + (component.speed ?? 0)
-          stealth = stealth + (component.stealth ?? 0)
-          charm = charm + (component.charm ?? 0)
+          strength = strength + (component.strength ?? 0);
+          speed = speed + (component.speed ?? 0);
+          stealth = stealth + (component.stealth ?? 0);
+          charm = charm + (component.charm ?? 0);
           return (
             <tr>
               <th scope="row">{inventorySlot}</th>
@@ -46,7 +48,11 @@ function InventoryList() {
               <td>{component.speed}</td>
               <td>{component.stealth}</td>
               <td>{component.charm}</td>
-              <td className='switch-items'><select onChange={(e)=>{dispatch(equipItem({key, bag:e.target.value}))}} value={lootEquipped[key]}><option>Empty</option><option>synthetic</option>{myBags.map(bag => {
+              <td className='switch-items'><select className='custom-select' onChange={(e)=>{
+                dispatch(equipItem({key, bag:e.target.value}));
+                let updateSlot = InsertOrUpdate("LootEquipped_0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", inventorySlots[key], e.target.value);
+                runQuery(updateSlot, "d9163b48670f4549813a6f66888bc1fb");
+              }} value={lootEquipped[key]}><option>Empty</option><option>synthetic</option>{myBags.map(bag => {
                 return <option>loot@{bag}</option>                
               })}
                 

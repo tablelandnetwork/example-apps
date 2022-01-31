@@ -8,5 +8,3 @@ export const inventorySlots = [
     "Necklace",
     "Ring"
 ];
-
-export const lootAttributesTable = "LootProjectAttributes";
