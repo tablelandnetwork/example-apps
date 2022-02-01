@@ -1,8 +1,8 @@
-name: "Textile Bucket - Deploy"
+name: "Textile Bucket - Deploy Tableland Todo App"
 on:
   push:
     branches:
-      - main
+      - todoapp-deploy
 jobs:
   deploy: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
