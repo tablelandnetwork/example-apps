@@ -7,6 +7,8 @@ jobs:
   deploy: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
     steps:
+      - name: checkout
+        uses: actions/checkout@v2
       - name: push # push to a known bucket
         id: bucket
         uses: "textileio/github-action-buckets@master"
