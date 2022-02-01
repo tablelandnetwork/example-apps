@@ -15,8 +15,7 @@ jobs:
           secret: ${{ secrets.BUCKET_SECRET }}
           bucket: "bafzbeigunr7rw7weammzaqryofc3ya3raw7lilnvchg4vf6h5xgcjbwuhi"
           thread: "bafk4ruiez2yyfjxytdmavnwa2vd4pq75ac44baxcan4hwe24sqdiyqi"
-          path: "./tableland-todo/dist/"
-          pattern: "**"
+          path: "./tableland-todo/dist"
       - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
       - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
       - run: echo "ipfs link - ${{ steps.bucket.outputs.ipfsUrl }}"
