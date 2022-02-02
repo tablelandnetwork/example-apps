@@ -123,7 +123,7 @@ call disconnect method in table.js, TODO: I think this method needs to be built 
 10. The user can click a *logout* button which results in the session token being destroyed and their wallet being disconnect.
 */
 
-
+console.log('index page');
 export default Vue.extend({
   data: function () {
     return {

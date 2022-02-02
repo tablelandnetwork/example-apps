@@ -83,31 +83,43 @@ export const actions: ActionTree<RootState, RootState> = {
     let listTableExists;
     // TODO: I can't find a way to do this that makes sense unless we add another column to the registry table
     for (let i = 0; i < tables.length; i++) {
-      // We are going to loop through every table uuid this ethAccount has in the registry table,
-      // NOTE: some of these might not have anything to do with the todo app
-      const uuid = tables[i].uuid;
-      const listTable = await runQuery(sql.selectListTable(), uuid) as any;
+      try {
+        // We are going to loop through every table uuid this ethAccount has in the registry table,
+        // NOTE: some of these might not have anything to do with the todo app
+        const uuid = tables[i].uuid;
+        const listTable = await runQuery(sql.selectListTable(), uuid) as any;
 
-      // if the uuid matches a table with the right name for this app we will assume it is storing the list names
-      // NOTE: this is definitely not a legitimate way to build a dApp since malicious dApps could have created this table
-      //       with some sort of bad intent
-      if (!listTable.error) {
-        context.commit('set', {key: 'listTableId', value: uuid});
-        context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
-        listTableExists = true;
-        break;
+        // if the uuid matches a table with the right name for this app we will assume it is storing the list names
+        // NOTE: this is definitely not a legitimate way to build a dApp since malicious dApps could have created this table
+        //       with some sort of bad intent
+        if (listTable.result) {
+          context.commit('set', {key: 'listTableId', value: uuid});
+          context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
+          listTableExists = true;
+          break;
+        }
+      } catch (err) {
+        // we are expecting this to fail, so ignoring the error for now
+        // TODO: once we can specifiy some kind of query to select listTable, remove this
       }
     }
 
     if (!listTableExists) {
-      const tableIdNoFormat = await createTable(sql.createListTable());
-      const listTableId = formatUuid(tableIdNoFormat.slice(2));
+      try {
+        const tableIdNoFormat = await createTable(sql.createListTable());
+        const listTableId = formatUuid(tableIdNoFormat.slice(2));
 
-      context.commit('set', {key: 'listTableId', value: listTableId || ''});
-      const listTable = await runQuery(sql.selectListTable(), listTableId) as any;
-      if (!listTable.error) {
-        context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
-        listTableExists = true;
+        context.commit('set', {key: 'listTableId', value: listTableId || ''});
+        const listTable = await runQuery(sql.selectListTable(), listTableId) as any;
+        console.log(listTable);
+        if (listTable.result) {
+          context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
+          listTableExists = true;
+        }
+      } catch (err) {
+        console.log('could not create list table');
+        console.log(err);
+        throw err;
       }
     }
 
