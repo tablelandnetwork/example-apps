@@ -65,9 +65,15 @@ export default Vue.extend({
   },
   methods: {
     createTable: async function () {
-      if (!this.newName) return;
+      if (!this.newName) {
+        await this.$store.dispatch('alert', {message: 'Please Choose a name for your list'});
+        return;
+      }
 
-      if (this.invalidName) return;
+      if (this.invalidName) {
+        await this.$store.dispatch('alert', {message: 'Sorry the name you chose is not valid. Please make sure there are no spaces, the name states with a letter, and only contains letters numbers and the underscore.  Also, names must be unique, so make sure the name isn\'t already being used'});
+        return;
+      }
 
       this.loading = true;
 

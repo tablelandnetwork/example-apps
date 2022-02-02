@@ -2,18 +2,8 @@
   <MjContainer>
     <div class="ml-4 mt-8 flex justify-between">
       <div>
-        <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
-        <div class="relative inline h-20 w-20 mr-10">
-          <div class="absolute -bottom-10 -left-5 font-bold">
-            ableland
-          </div>
-        </div>
-        <span class="mr-8"></span>
-        <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
-        <div class="relative inline h-20 w-20 mr-10">
-          <div class="absolute -bottom-10 -left-5 font-bold">
-            odos
-          </div>
+        <div class="items-center mr-10 mt-6 font-bold">
+          Tableland Todos
         </div>
       </div>
 
@@ -27,7 +17,7 @@
             class="float-right"
           >
             <span v-if="!tablelandConnected">
-              Connect
+              Connect to Tableland
             </span>
 
             <span v-if="tablelandConnected">
@@ -58,7 +48,7 @@
           :disabled="tablelandConnected"
           @click="connect"
         >
-          Connect to Tableland <img src="@/static/logo.svg" class="w-8 inline" alt="TODO: get a tableland logo">
+          Connect to Tableland
         </MjButton>
       </MjRow>
     </MjContainer>
@@ -136,23 +126,17 @@ export default Vue.extend({
   },
   computed: {
     ...mapState({
-      tables: (state: any) => state.allTables
+      tables: (state: any) => state.allTables,
+      toastMessage: (state: any) => state.alertMessage
     })
   },
+  watch: {
+    toastMessage: function (message) {
+      console.log(message);
+      if (message) this.showToast(message);
+    }
+  },
   methods: {
-    createTable: async function (name: string) {
-      if (this.loading) return;
-
-      this.loading = true;
-
-      try {
-        await this.$store.dispatch('createTable', {name: name});
-      } catch (err) {
-        console.log(err);
-        (this.$refs.toast as any).log(err);
-      }
-
-    },
     connect: async function () {
       if (this.loading) return;
 
@@ -162,13 +146,21 @@ export default Vue.extend({
         await this.$store.dispatch('connect');
 
         this.tablelandConnected = true;
-        (this.$refs.toast as any).log('Connected to Tableland!');
+        await this.$store.dispatch('alert', {
+          message: 'Connected to Tableland!'
+        });
       } catch (err) {
         console.log(err);
-        (this.$refs.toast as any).log('Darn! Having trouble connecting to Tableland.  Please make sure you have the MetaMask extension installed in your browser');
+        await this.$store.dispatch('alert', {
+          message: 'Darn! Having trouble connecting to Tableland.  Please make sure you have the MetaMask extension installed in your browser'
+        });
       }
 
       this.loading = false;
+    },
+    // One messaging toaster at the page level to ensure layout doesn't affect visibility
+    showToast: function (message: string) {
+      (this.$refs.toast as any).log(message);
     }
   }
 });

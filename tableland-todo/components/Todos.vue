@@ -128,6 +128,16 @@ export default Vue.extend({
     // the 2 browser window problem
     tasks: function (tasks: any[]) {
       const update = tasks.map((task: Task) => {
+        const memTask = this.tasksInMem.find(t => t.id === task.id);
+        if (memTask && !this.tasksAreSame(memTask, task)) {
+          // If we end up in side this conditional it means we sent an update to the Tableland network, and
+          // the task was changed again before the response returned. Example: the user is checking and unchecking
+          // a task, or typing super fast!
+          // In this case we don't want to update the inmemory task becasue there's another request in progress
+          // that will return with the new updates
+          return memTask;
+        }
+
         return {...task, dirty: false} as MemTask;
       });
 

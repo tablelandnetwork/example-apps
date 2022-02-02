@@ -13,6 +13,7 @@ export interface Task {
 
 export const state = function () {
   return {
+    alertMessage: '',
     ethAddress: '',
     listTable: [] as any,
     listTableId: '' as string,
@@ -39,6 +40,11 @@ export const mutations: MutationTree<RootState> = {
 
 
 export const actions: ActionTree<RootState, RootState> = {
+  alert: async function (context, params) {
+    context.commit('set', {key: 'alertMessage', value: params.message});
+    // because this "has side affects" we want it to be async
+    await wait(0);
+  },
   connect: async function (context) {
     // connect to tableland
     console.log(`connecting to validator at: ${process.env.validatorHost}`);
@@ -52,8 +58,7 @@ export const actions: ActionTree<RootState, RootState> = {
     await context.dispatch('loadTables');
   },
   createTable: async function (context, params) {
-    // TODO: table is a variation of a v4 uuid with 0x prepended and no dashes
-    const table = await createTable(sql.createTable(params.name));
+    const table = await createTable(sql.createTable(params.name), 'TODO: update function arity once lib changes take affect');
     const tableId = formatUuid(table.slice(2));
     const listTable = await runQuery(sql.insertList(params.name, tableId), context.state.listTableId) as any;
 
@@ -106,7 +111,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
     if (!listTableExists) {
       try {
-        const tableIdNoFormat = await createTable(sql.createListTable());
+        const tableIdNoFormat = await createTable(sql.createListTable(), 'TODO: update function arity once lib changes take affect');
         const listTableId = formatUuid(tableIdNoFormat.slice(2));
 
         context.commit('set', {key: 'listTableId', value: listTableId || ''});
