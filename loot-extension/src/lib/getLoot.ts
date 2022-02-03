@@ -1,8 +1,8 @@
 import sLootAbi from './sLootAbi.json';
 import lootAbi from './lootAbi.json';
 import lootProperties from './lootItemComponents.json';
-import { ethers } from 'ethers';
-
+import { ethers, Signer } from 'ethers';
+let signer: Signer;
 
 const synthLoot = {
   "address": "0x869Ad3Dfb0F9ACB9094BA85228008981BE6DBddE",
@@ -40,36 +40,32 @@ export interface LootComponent extends Array<any> {
     [index: number]: string 
 }
 
-function ComponentEnumToObject(item_hex: Array<{_hex: string}>, key: number) {
-    const item = item_hex.map(property => {
-        return parseInt(property._hex, 16);
-    });
 
-    let lootProps: any = (lootProperties as any);
-    let slot: string = slots[key];
-    let base = lootProps[slot][item[0]];
-    let suffix = lootProps.suffixes[item[1]];
-    let namePrefix = lootProps.namePrefixes[item[2]];
-    let nameSuffix = lootProps.nameSuffixes[item[3]];
-    let plusOne = item[4] === 1 ? "+1" : "";
+async function GetSyntheticLoot() {
+    const sLootContract = new ethers.Contract(synthLoot.address, synthLoot.abi, signer);
+    let userAddress = await signer.getAddress();
+    let synth = await Promise.all([
+        sLootContract.weaponComponents(userAddress),
+        sLootContract.chestComponents(userAddress),
+        sLootContract.headComponents(userAddress),
+        sLootContract.waistComponents(userAddress),
+        sLootContract.footComponents(userAddress),
+        sLootContract.handComponents(userAddress),
+        sLootContract.neckComponents(userAddress),
+        sLootContract.ringComponents(userAddress)
+    ]);
 
-
-    return [namePrefix, nameSuffix, base, suffix, plusOne];
+    return {id: "synthetic", items: synth.map(ComponentEnumToObject)};
 }
 
 
-export async function getLoot(bags: number[]) : Promise<LootBag[]> {
+
+async function GetRealLoot(bags: number[]) {
     const provider = new ethers.providers.Web3Provider((window as any).ethereum, "any");
-    const signer = provider.getSigner();
-    const sLootContract = new ethers.Contract(synthLoot.address, synthLoot.abi, signer);
+    signer = provider.getSigner();
+    
 
     const lootContract = new ethers.Contract(loot.address, loot.abi, signer);
-
-    
-    await provider.send("eth_requestAccounts", []);
-    
-    let userAddress = await signer.getAddress();
-    
 
 
 
@@ -84,10 +80,6 @@ export async function getLoot(bags: number[]) : Promise<LootBag[]> {
             lootContract.getNeck(bag),
             lootContract.getRing(bag)        
         ]);
-    
-    
-    
-    
         
         
         let realLootBagComponents = realLootBag.map(realLootItem => {
@@ -112,22 +104,35 @@ export async function getLoot(bags: number[]) : Promise<LootBag[]> {
         }
     });
     
-    let populatedResolvedBags = await Promise.all(populatedBags);
+    return await Promise.all(populatedBags);
+}
 
 
-    
-    let synth = await Promise.all([
-        sLootContract.weaponComponents(userAddress),
-        sLootContract.chestComponents(userAddress),
-        sLootContract.headComponents(userAddress),
-        sLootContract.waistComponents(userAddress),
-        sLootContract.footComponents(userAddress),
-        sLootContract.handComponents(userAddress),
-        sLootContract.neckComponents(userAddress),
-        sLootContract.ringComponents(userAddress)
-    ]);
 
-    populatedResolvedBags.push({id: "synthetic", items: synth.map(ComponentEnumToObject)});
+function ComponentEnumToObject(item_hex: Array<{_hex: string}>, key: number) {
+    const item = item_hex.map(property => {
+        return parseInt(property._hex, 16);
+    });
 
-    return populatedResolvedBags;
+    let lootProps: any = (lootProperties as any);
+    let slot: string = slots[key];
+    let base = lootProps[slot][item[0]];
+    let suffix = lootProps.suffixes[item[1]];
+    let namePrefix = lootProps.namePrefixes[item[2]];
+    let nameSuffix = lootProps.nameSuffixes[item[3]];
+    let plusOne = item[4] === 1 ? "+1" : "";
+
+
+    return [namePrefix, nameSuffix, base, suffix, plusOne];
+}
+
+
+export async function getLoot(bags: number[]) : Promise<LootBag[]> {
+
+    let realLootBags = await GetRealLoot(bags);
+
+
+    realLootBags.push(await GetSyntheticLoot());
+
+    return realLootBags;
 }

@@ -45,7 +45,7 @@ export const counterSlice = createSlice({
       state.value = parseEquipped(action.payload.result.data.rows, stateOld);
     },
     equipItem: (state: any, action:any) => {
-      console.log(action);
+
       state.value[action.payload.key] = action.payload.bag;
     }
   }

@@ -15,7 +15,7 @@ function InventoryList() {
     return (
       <table className='loot-bags'>
         <thead>
-          <th>
+
             <tr>
               <td>Slot</td>
               <td>Name</td>
@@ -25,7 +25,7 @@ function InventoryList() {
               <td>Charm</td>
               <td>Equipped from</td>
             </tr>
-          </th>
+
         </thead>
         <tbody>
   
@@ -39,7 +39,7 @@ function InventoryList() {
           stealth = stealth + (component.stealth ?? 0);
           charm = charm + (component.charm ?? 0);
           return (
-            <tr>
+            <tr key={inventorySlot}>
               <th scope="row">{inventorySlot}</th>
               <td> 
                 {component.name}
@@ -53,7 +53,7 @@ function InventoryList() {
                 let updateSlot = InsertOrUpdate("LootEquipped_0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", inventorySlots[key], e.target.value);
                 runQuery(updateSlot, "d9163b48670f4549813a6f66888bc1fb");
               }} value={lootEquipped[key]}><option>Empty</option><option>synthetic</option>{myBags.map(bag => {
-                return <option>loot@{bag}</option>                
+                return <option key={bag}>loot@{bag}</option>                
               })}
                 
               </select></td>

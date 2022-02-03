@@ -10,5 +10,5 @@ export function InsertOrUpdate(tableId: string, slot: string, bag: string): stri
 }
 
 export function CreateEquippedTable(sig:string) {
-    return `CREATE TABLE LootEquipped_${sig} (id int primary key, slot text unique, bag text)`;
+    return `CREATE TABLE LootProjectInventory (id int primary key, slot text unique, bag text)`;
 }
