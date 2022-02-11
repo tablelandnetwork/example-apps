@@ -16,6 +16,7 @@ export const state = function () {
     alertMessage: '',
     tableland: {} as any,
     listTable: [] as any,
+    listTableName: '' as string,
     currentTableId: '' as string,
     currentTableName: '' as string,
     currentQueryableName: '' as string,
@@ -63,23 +64,39 @@ export const actions: ActionTree<RootState, RootState> = {
     try {
       // connect to tableland
       console.log(`connecting to validator at: ${process.env.validatorHost}`);
-      await getConnection({
+      const tableland = await getConnection({
         host: process.env.validatorHost as string
       });
 
-      // get all of the user's existing tables
-      await context.dispatch('loadTables');
+      const myAddress = await tableland.signer.getAddress();
+      const allTables = await tableland.list();
+
+      const listTable = allTables.find((list: any) => {
+        return list.name.indexOf(`${listTablePrefix}_${myAddress.slice(2,8).toLowerCase()}`) === 0;
+      });
+
+      if (listTable && listTable.name) {
+        context.commit('set', {key: 'listTableName', value: listTable.name as string});
+        // get all of the user's existing tables
+        return await context.dispatch('loadTables');
+      }
+
+      await context.dispatch('init');
     } catch (err) {
       throw err;
     }
   },
+  // do one time create of table that holds all the list information
   init: async function (context) {
     try {
       const tableland = await getConnection();
 
-      // get all of the user's existing tables
-      const res = await tableland.create(sql.createListTable());
-      console.log(res);
+      const listOwner = await tableland.signer.getAddress();
+      const listTable = await tableland.create(sql.createListTable(listOwner));
+
+      // store queryable list table name for later use
+      context.commit('set', {key: 'listTableName', value: listTable.name});
+      return await context.dispatch('loadTables');
     } catch (err) {
       throw err;
     }
@@ -96,24 +113,31 @@ export const actions: ActionTree<RootState, RootState> = {
       // stripping the id from queryable name
       const tableId = queryableName.split('_').pop() as string;
       const listOwner = await tableland.signer.getAddress();
-      const listTable = await tableland.query(sql.insertList(listName, queryableName, tableId, listOwner)) as any;
-
-      await context.dispatch('loadTable', {
-        name: queryableName
-      });
+      const listTable = await tableland.query(sql.insertList({
+        listTableName: context.state.listTableName,
+        listName: listName,
+        tableName: queryableName,
+        tableId: tableId
+      })) as any;
 
       // refresh the list of all of the user's existing tables
       await context.dispatch('loadTables');
+
+      // Load the new list for the user to interact with
+      await context.dispatch('loadTable', {
+        name: queryableName
+      });
     } catch (err) {
       throw err;
     }
   },
   loadTables: async function (context) {
-    let listTable;
     try {
       const tableland = await getConnection();
       const listOwner = await tableland.signer.getAddress();
-      listTable = await tableland.query(sql.selectListTable(listOwner)) as any;
+      const listTable = await tableland.query(sql.selectListTable(context.state.listTableName)) as any;
+
+      if (!listTable.data) throw new Error('list table cannot be loaded');
 
       context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.data)});
     } catch (err) {
@@ -143,7 +167,7 @@ export const actions: ActionTree<RootState, RootState> = {
     try {
       const task = {complete: false, name: '', id: getNextId(context.state.tasks)};
       const tableland = await getConnection();
-      
+
       // send off async request to Tableland
       const res = await tableland.query(sql.insertTask(context.state.currentQueryableName, task)) as any;
 
@@ -211,8 +235,8 @@ const formatUuid = function (val: string) {
 };
 
 // this is here for reference only. Creating the table that holds all lists only happens once ever when this app is built
-const listTableCreateName = 'todo_app_all_lists_v1';
-const listTableName = 'todo_app_all_lists_v1_10';
+const listTablePrefix = 'todo_app_example_';
+
 /*
  *
  * list_name TEXT, table_name TEXT, table_id TEXT, table_controller TEXT
@@ -228,32 +252,33 @@ const sql = {
   deleteTask: (name: string, taskId: number) => `
     UPDATE ${name} SET deleted = true WHERE id = ${taskId};
   `,
-  insertList: (listName: string, tableName: string, tableId: string, tableController: string) => `
-    INSERT INTO ${listTableName}(
+  insertList: (params: {
+    listTableName: string,
+    listName: string,
+    tableName: string,
+    tableId: string
+  }) => `
+    INSERT INTO ${params.listTableName}(
       list_name,
       table_name,
-      table_id,
-      table_controller
+      table_id
     ) VALUES (
-      '${listName}',
-      '${tableName}',
-      '${tableId}',
-      '${tableController}'
+      '${params.listName}',
+      '${params.tableName}',
+      '${params.tableId}'
     );
   `,
   insertTask: (tableName: string, task: {complete: boolean, name: string, id: number}) => `
     INSERT INTO ${tableName}(complete, name, id) VALUES (${task.complete}, '${task.name}', ${task.id});
   `,
-  createListTable: () => `CREATE TABLE ${listTableCreateName} (
+  createListTable: (controllerAddress: string) => `CREATE TABLE ${listTablePrefix}_${controllerAddress.slice(2,10).toLowerCase()} (
     list_name TEXT,
     table_name TEXT,
     table_id TEXT,
     table_controller TEXT
   );`,
-  selectListTable: (listOwner: string) => `SELECT * FROM ${listTableName} WHERE table_controller = '${listOwner}';`,
-  selectTodoTable: (name: string) => `SELECT * FROM ${name}
-    ORDER BY id ASC;
-  `,
+  selectListTable: (listTableName: string) => `SELECT * FROM ${listTableName};`,
+  selectTodoTable: (name: string) => `SELECT * FROM ${name} ORDER BY id ASC;`,
   updateTask: (name: string, task: {complete: boolean, name: string, id: number}) => `
     UPDATE ${name} SET complete = ${task.complete}, name = '${task.name}' WHERE id = ${task.id};
   `
