@@ -56,11 +56,11 @@ describe('Index Page', function () {
 
   test('connects to metamask', async function () {
     const metamaskButton = wrapper.find('button');
-    expect(metamaskButton.find('span').text()).toMatch('Connect MetaMask');
+    expect(metamaskButton.find('span').text()).toMatch('Connect to Tableland');
 
     await metamaskButton.trigger('click');
     await flushPromises();
 
-    expect(metamaskButton.find('span').text()).toMatch('MetaMask Connected');
+    expect(metamaskButton.find('span').text()).toMatch('Disconnect');
   });
 });

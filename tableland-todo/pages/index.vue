@@ -35,12 +35,6 @@
     <MjDivider class="my-8"></MjDivider>
 
     <MjContainer v-if="!tablelandConnected">
-      <MjHeadline :size="2" class="font-bold mt-16 m-8">Howdy, Yonder Lies Tableland</MjHeadline>
-      <MjHeadline :size="4">
-        To get started you'll need to connect to Tableland, which will require you to sign a JWT using MetaMask. Once you're connected we will know if you've been here before.<br>
-        If you've been here before we will load your lists.<br>
-        If you haven't we will need you to pay the gas costs to build a table that tracks your lists.  Then you will pay the gas costs to build each of the lists you create.
-      </MjHeadline>
       <MjRow class="justify-center">
         <MjButton
           variant="secondary"
@@ -113,7 +107,7 @@ call disconnect method in table.js, TODO: I think this method needs to be built 
 10. The user can click a *logout* button which results in the session token being destroyed and their wallet being disconnect.
 */
 
-console.log('index page');
+
 export default Vue.extend({
   data: function () {
     return {
@@ -162,6 +156,10 @@ export default Vue.extend({
     showToast: function (message: string) {
       (this.$refs.toast as any).log(message);
     }
+  },
+  mounted: function () {
+    // use dark theme
+    document.getElementsByTagName('html')[0].setAttribute('class', 'dark dark-mode');
   }
 });
 
