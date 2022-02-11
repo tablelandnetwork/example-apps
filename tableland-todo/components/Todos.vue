@@ -1,9 +1,9 @@
 <template>
   <div class="flex items-top items-center sm:pt-0">
     <MjContainer v-if="listName" class="text-center">
-      <MjHeadline>{{ listName }}</MjHeadline>
+      <MjHeadline class="text-orbitron">{{ listName }}</MjHeadline>
       <div class="my-4 mx-auto w-64 h-6">
-        <div class="text-left">
+        <div class="text-left text-poppins">
           <MjTransitionFadeY
             flip
           >
@@ -35,6 +35,7 @@
               @input="val => updateTask({name: val}, task)"
               placeholder="Choose a name..."
               :ref="'task-' + task.id"
+              class="text-poppins"
             >
               <template #icon #suffix>
                 <MjIcon name="edit-2"></MjIcon>
@@ -49,17 +50,17 @@
       </MjTransitionFadeY>
 
       <div class="m-auto w-64 text-left">
-        <MjButton class="mt-2 ml-8" :loading="loading" :disabled="loading" @click="createTask" variant="secondary">
+        <MjButton class="mt-2 ml-8 text-poppins" :loading="loading" :disabled="loading" @click="createTask" variant="secondary">
           <MjIcon name="plus"></MjIcon>
           New Task
         </MjButton>
       </div>
 
       <div v-if="deletedTasks.length" class="m-auto w-64 text-center">
-        <MjLink v-if="!showingDeleted" @click="showDeleted" color="gray" class="cursor-pointer">
+        <MjLink v-if="!showingDeleted" @click="showDeleted" color="gray" class="cursor-pointer text-poppins">
           show deleted
         </MjLink>
-        <MjLink v-if="showingDeleted" @click="hideDeleted" color="gray" class="cursor-pointer">
+        <MjLink v-if="showingDeleted" @click="hideDeleted" color="gray" class="cursor-pointer text-poppins">
           hide deleted
         </MjLink>
       </div>
@@ -77,6 +78,7 @@
             disabled
             placeholder="Choose a name..."
             :ref="'task-' + task.id"
+            class="text-poppins"
           >
             <template #icon #suffix>
               <MjIcon name="edit-2"></MjIcon>

@@ -1,29 +1,28 @@
 <template>
   <MjContainer>
     <MjRow>
-      <MjInput placeholder="list name" v-model.trim="newName"></MjInput>
-      <MjButton class="ml-2" :loading="loading" :disabled="invalidName || loading" @click="createTable" variant="secondary">
+      <MjInput placeholder="list name" class="text-poppins" v-model.trim="newName"></MjInput>
+      <MjButton class="ml-2 text-poppins" :loading="loading" :disabled="invalidName || loading" @click="createTable" variant="secondary">
         <MjIcon name="plus"></MjIcon>
         Mint a List
       </MjButton>
     </MjRow>
     <MjRow class=py-4>
-      <MjNote v-if="invalidName" variant="danger">
+      <MjNote v-if="invalidName" variant="danger" class="text-poppins">
         Name is not valid. List names must be unique. List names must start with a letter and can only include alphanumeric characters and the underscore.
       </MjNote>
     </MjRow>
 
     <MjRow class="mt-4">
-      <MjParagraph>Your Lists</MjParagraph>
       <MjTable density="tight">
         <MjTableHead>
-          <MjTableHeader>
-            Name
+          <MjTableHeader class="text-orbitron">
+            Your Lists
           </MjTableHeader>
         </MjTableHead>
 
         <MjTableBody>
-          <MjTableRow v-for="table in allTables" :key="table.table_id" clickable @click="loadTable(table)">
+          <MjTableRow v-for="table in allTables" :key="table.table_id" clickable @click="loadTable(table)" class="text-poppins">
             <MjTableCell>
               {{ table.list_name }}
             </MjTableCell>

@@ -2,7 +2,7 @@
   <MjContainer>
     <div class="ml-4 mt-8 flex justify-between">
       <div>
-        <div class="items-center mr-10 mt-6 font-bold">
+        <div class="items-center mr-10 mt-4 font-bold text-orbitron text-3xl">
           Tableland Todos
         </div>
       </div>
@@ -14,7 +14,7 @@
             :loading="loading"
             :disabled="tablelandConnected"
             @click="connect"
-            class="float-right"
+            class="float-right text-poppins"
           >
             <span v-if="!tablelandConnected">
               Connect to Tableland
@@ -25,11 +25,6 @@
             </span>
           </MjButton>
         </MjRow>
-        <div class="mt-2 w-60 h-8 truncate text-gray-500">
-          <span v-if="ethAddress">
-            ETH Addr: {{ ethAddress }}
-          </span>
-        </div>
       </div>
     </div>
     <MjDivider class="my-8"></MjDivider>
@@ -41,6 +36,7 @@
           :loading="loading"
           :disabled="tablelandConnected"
           @click="connect"
+          class="text-poppins"
         >
           Connect to Tableland
         </MjButton>
