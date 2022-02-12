@@ -1,0 +1,29 @@
+name: "Textile Bucket - Deploy Tableland Loot App"
+on:
+  push:
+    branches:
+      - lootapp-deploy
+jobs:
+  deploy: # make sure the action works on a clean machine without building
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: push # push to a known bucket
+        id: bucket
+        uses: "textileio/github-action-buckets@master"
+        with:
+          key: ${{ secrets.BUCKET_KEY }}
+          secret: ${{ secrets.BUCKET_SECRET }}
+          bucket: "bafzbeiegu2rhlnkojkns62ozvzc734kj3onabvivwjdr5kaxnrra7uc6sy"
+          thread: "bafk4vogxib7zwui5fnid7mxd7d4pdxublx7ojvqydzrs6vmjs7jr3bi"
+          path: "loot-extension/build"
+      - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
+      - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
+      - run: echo "ipfs link - ${{ steps.bucket.outputs.ipfsUrl }}"
+      - run: echo "ipns - ${{ steps.bucket.outputs.ipns }}"
+      - run: echo "ipns link - ${{ steps.bucket.outputs.ipnsUrl }}"
+      - run: echo "hub - ${{ steps.bucket.outputs.hub }}"
+      - run: echo "www - ${{ steps.bucket.outputs.www }}"
+
+      
