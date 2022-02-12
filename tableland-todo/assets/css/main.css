@@ -1,3 +1,26 @@
+@import url("https://fonts.googleapis.com/css?family=Orbitron:900|Poppins:400,500,600|Fira+Code:400");
+@font-face {
+  font-family: "SF Compact Display-Regular";
+  font-style: normal;
+  font-weight: 400;
+  src: url("~assets/fonts/sfcompactdisplay-regular.otf")
+    format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Text-Regular";
+  font-style: normal;
+  font-weight: 400;
+  src: url("~assets/fonts/sf-pro-text-regular.otf")
+    format("opentype");
+}
+@font-face {
+  font-family: "SF Pro Text-Semibold";
+  font-style: normal;
+  font-weight: 400;
+  src: url("~assets/fonts/sf-pro-text-semibold.otf")
+    format("opentype");
+}
+
 :root {
   --color: #243746;
   --color-primary: #158876;
@@ -5,13 +28,29 @@
   --bg: #f3f5f4;
   --bg-secondary: #fff;
   --border-color: #ddd;
+
+  --font-size-l: 18px;
+  --font-size-m: 16px;
+  --font-size-s: 14px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 28px;
+  --font-size-xxxl: 45px;
+  --font-size-xxxxl: 55px;
+
+  --font-family-fira_code: "Fira Code", Helvetica;
+  --font-family-fira_code-medium: "Fira Code-Medium", Helvetica;
+  --font-family-orbitron: "Orbitron", Helvetica;
+  --font-family-poppins: "Poppins", Helvetica;
+  --font-family-sf_compact_display-regular: "SF Compact Display-Regular", Helvetica;
+  --font-family-sf_pro_text-regular: "SF Pro Text-Regular", Helvetica;
+  --font-family-sf_pro_text-semibold: "SF Pro Text-Semibold", Helvetica;
 }
 
 .dark-mode {
   --color: #ebf4f1;
   --color-primary: #41b38a;
   --color-secondary: #fdf9f3;
-  --bg: #091a28;
+  --bg: #18181b;
   --bg-secondary: #071521;
   --border-color: #0d2538;
 }
@@ -21,6 +60,14 @@
   --bg: #f1e7d0;
   --bg-secondary: #eae0c9;
   --border-color: #ded0bf;
+}
+
+.text-orbitron {
+  font-family: var(--font-family-orbitron);
+}
+
+.text-poppins {
+  font-family: var(--font-family-poppins);
 }
 
 html, body {

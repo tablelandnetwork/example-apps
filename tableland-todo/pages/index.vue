@@ -2,18 +2,8 @@
   <MjContainer>
     <div class="ml-4 mt-8 flex justify-between">
       <div>
-        <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
-        <div class="relative inline h-20 w-20 mr-10">
-          <div class="absolute -bottom-10 -left-5 font-bold">
-            ableland
-          </div>
-        </div>
-        <span class="mr-8"></span>
-        <img src="@/static/logo.svg" class="w-20 inline" alt="TODO: get a tableland logo">
-        <div class="relative inline h-20 w-20 mr-10">
-          <div class="absolute -bottom-10 -left-5 font-bold">
-            odos
-          </div>
+        <div class="items-center mr-10 mt-4 font-bold text-orbitron text-3xl">
+          Tableland Todos
         </div>
       </div>
 
@@ -24,10 +14,10 @@
             :loading="loading"
             :disabled="tablelandConnected"
             @click="connect"
-            class="float-right"
+            class="float-right text-poppins"
           >
             <span v-if="!tablelandConnected">
-              Connect
+              Connect to Tableland
             </span>
 
             <span v-if="tablelandConnected">
@@ -35,30 +25,20 @@
             </span>
           </MjButton>
         </MjRow>
-        <div class="mt-2 w-60 h-8 truncate text-gray-500">
-          <span v-if="ethAddress">
-            ETH Addr: {{ ethAddress }}
-          </span>
-        </div>
       </div>
     </div>
     <MjDivider class="my-8"></MjDivider>
 
     <MjContainer v-if="!tablelandConnected">
-      <MjHeadline :size="2" class="font-bold mt-16 m-8">Howdy, Yonder Lies Tableland</MjHeadline>
-      <MjHeadline :size="4">
-        To get started you'll need to connect to Tableland, which will require you to sign a JWT using MetaMask. Once you're connected we will know if you've been here before.<br>
-        If you've been here before we will load your lists.<br>
-        If you haven't we will need you to pay the gas costs to build a table that tracks your lists.  Then you will pay the gas costs to build each of the lists you create.
-      </MjHeadline>
       <MjRow class="justify-center">
         <MjButton
           variant="secondary"
           :loading="loading"
           :disabled="tablelandConnected"
           @click="connect"
+          class="text-poppins"
         >
-          Connect to Tableland <img src="@/static/logo.svg" class="w-8 inline" alt="TODO: get a tableland logo">
+          Connect to Tableland
         </MjButton>
       </MjRow>
     </MjContainer>
@@ -136,23 +116,17 @@ export default Vue.extend({
   },
   computed: {
     ...mapState({
-      tables: (state: any) => state.allTables
+      tables: (state: any) => state.allTables,
+      toastMessage: (state: any) => state.alertMessage
     })
   },
+  watch: {
+    toastMessage: function (message) {
+      console.log(message);
+      if (message) this.showToast(message);
+    }
+  },
   methods: {
-    createTable: async function (name: string) {
-      if (this.loading) return;
-
-      this.loading = true;
-
-      try {
-        await this.$store.dispatch('createTable', {name: name});
-      } catch (err) {
-        console.log(err);
-        (this.$refs.toast as any).log(err);
-      }
-
-    },
     connect: async function () {
       if (this.loading) return;
 
@@ -162,14 +136,26 @@ export default Vue.extend({
         await this.$store.dispatch('connect');
 
         this.tablelandConnected = true;
-        (this.$refs.toast as any).log('Connected to Tableland!');
+        await this.$store.dispatch('alert', {
+          message: 'Connected to Tableland!'
+        });
       } catch (err) {
         console.log(err);
-        (this.$refs.toast as any).log('Darn! Having trouble connecting to Tableland.  Please make sure you have the MetaMask extension installed in your browser');
+        await this.$store.dispatch('alert', {
+          message: 'Darn! Having trouble connecting to Tableland.  Please make sure you have the MetaMask extension installed in your browser'
+        });
       }
 
       this.loading = false;
+    },
+    // One messaging toaster at the page level to ensure layout doesn't affect visibility
+    showToast: function (message: string) {
+      (this.$refs.toast as any).log(message);
     }
+  },
+  mounted: function () {
+    // use dark theme
+    document.getElementsByTagName('html')[0].setAttribute('class', 'dark dark-mode');
   }
 });
 

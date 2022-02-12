@@ -1,6 +1,6 @@
 import { ActionTree, GetterTree, MutationTree } from 'vuex';
 import { ethers } from 'ethers';
-import { connect, createTable, runQuery, myTables } from '@textile/js-tableland';
+import { connect } from '@textile/tableland';
 
 
 
@@ -13,16 +13,29 @@ export interface Task {
 
 export const state = function () {
   return {
-    ethAddress: '',
+    alertMessage: '',
+    tableland: {} as any,
     listTable: [] as any,
-    listTableId: '' as string,
-    allTables: [] as any[],
-    allTableIds: [] as string[],
+    listTableName: '' as string,
     currentTableId: '' as string,
     currentTableName: '' as string,
+    currentQueryableName: '' as string,
     tasks: [] as Task[]
   };
 };
+
+const getConnection = function () {
+  let connection: any;
+  return async function (options?: any) {
+    if (connection) return connection;
+
+    connection = await connect({
+      host: process.env.validatorHost as string
+    });
+
+    return connection;
+  };
+}();
 
 export type RootState = ReturnType<typeof state>
 
@@ -39,143 +52,157 @@ export const mutations: MutationTree<RootState> = {
 
 
 export const actions: ActionTree<RootState, RootState> = {
-  connect: async function (context) {
-    // connect to tableland
-    console.log(`connecting to validator at: ${process.env.validatorHost}`);
-    const res = await connect(process.env.validatorHost as string);
-    console.log(res);
-    const { ethAccounts } = res;
-
-    // save the user's eth account address
-    context.commit('set', {key: 'ethAddress', value: ethAccounts[0]});
-
-    // get all of the user's existing tables
-    await context.dispatch('loadTables');
+  alert: async function (context, params) {
+    // There are potentially components watching alertMessage that will alter the view
+    // e.g. a Toast message
+    context.commit('set', {key: 'alertMessage', value: params.message});
+    // because this "has side affects" we want it to be async so that callers of alert
+    // can await then manipulate the view with the new state
+    await wait(0);
   },
-  createTable: async function (context, params) {
-    console.log('createTable');
-    // TODO: table is a variation of a v4 uuid with 0x prepended and no dashes
-    const table = await createTable(sql.createTable(params.name));
-    const tableId = formatUuid(table.slice(2));
-    const listTable = await runQuery(sql.insertList(params.name, tableId), context.state.listTableId) as any;
+  connect: async function (context) {
+    try {
+      // connect to tableland
+      console.log(`connecting to validator at: ${process.env.validatorHost}`);
+      const tableland = await getConnection({
+        host: process.env.validatorHost as string
+      });
 
-    if (listTable.error) {
-      console.log(listTable.error);
-      return;
+      const myAddress = await tableland.signer.getAddress();
+      const allTables = await tableland.list();
+
+      const listTable = allTables.find((list: any) => {
+        return list.name.indexOf(`${listTablePrefix}_${myAddress.slice(2,8).toLowerCase()}`) === 0;
+      });
+
+      if (listTable && listTable.name) {
+        context.commit('set', {key: 'listTableName', value: listTable.name as string});
+        // get all of the user's existing tables
+        return await context.dispatch('loadTables');
+      }
+
+      await context.dispatch('init');
+    } catch (err) {
+      throw err;
     }
+  },
+  // do one time create of table that holds all the list information
+  init: async function (context) {
+    try {
+      const tableland = await getConnection();
 
-    await context.dispatch('loadTable', {
-      tableId: tableId,
-      name: params.name
-    });
+      const listOwner = await tableland.signer.getAddress();
+      const listTable = await tableland.create(sql.createListTable(listOwner));
 
-    // refresh the list of all of the user's existing tables
-    await context.dispatch('loadTables');
+      // store queryable list table name for later use
+      context.commit('set', {key: 'listTableName', value: listTable.name});
+      return await context.dispatch('loadTables');
+    } catch (err) {
+      throw err;
+    }
+  },
+  createList: async function (context, params) {
+    try {
+      const listName = params.name;
+      const tableName = 'todo_' + params.name.trim().replaceAll(' ', '_');
+      const tableland = await getConnection();
+
+      const table = await tableland.create(sql.createList(tableName));
+      const queryableName = table.name as string;
+
+      // stripping the id from queryable name
+      const tableId = queryableName.split('_').pop() as string;
+      const listOwner = await tableland.signer.getAddress();
+      const listTable = await tableland.query(sql.insertList({
+        listTableName: context.state.listTableName,
+        listName: listName,
+        tableName: queryableName,
+        tableId: tableId
+      })) as any;
+
+      // refresh the list of all of the user's existing tables
+      await context.dispatch('loadTables');
+
+      // Load the new list for the user to interact with
+      await context.dispatch('loadTable', {
+        name: queryableName
+      });
+    } catch (err) {
+      throw err;
+    }
   },
   loadTables: async function (context) {
-    // get all the tables controlled by this user's eth address
-    const tables: any = await myTables();
+    try {
+      const tableland = await getConnection();
+      const listOwner = await tableland.signer.getAddress();
+      const listTable = await tableland.query(sql.selectListTable(context.state.listTableName)) as any;
 
-    if (tables.error) {
-      console.log(tables.error);
-      context.commit('set', {key: 'allTables', value: []});
-      return;
+      if (!listTable.data) throw new Error('list table cannot be loaded');
+
+      context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.data)});
+    } catch (err) {
+      throw err;
     }
-
-    let listTableExists;
-    // TODO: I can't find a way to do this that makes sense unless we add another column to the registry table
-    for (let i = 0; i < tables.length; i++) {
-      // We are going to loop through every table uuid this ethAccount has in the registry table,
-      // NOTE: some of these might not have anything to do with the todo app
-      const uuid = tables[i].uuid;
-      const listTable = await runQuery(sql.selectListTable(), uuid) as any;
-
-      console.log(listTable);
-      // if the uuid matches a table with the right name for this app we will assume it is storing the list names
-      // NOTE: this is definitely not a legitimate way to build a dApp since malicious dApps could have created this table
-      //       with some sort of bad intent
-      if (!listTable.error) {
-        console.log('found list table with uuid: ' + uuid);
-        context.commit('set', {key: 'listTableId', value: uuid});
-        context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
-        listTableExists = true;
-        break;
-      }
-    }
-
-    if (!listTableExists) {
-      const tableIdNoFormat = await createTable(sql.createListTable());
-      const listTableId = formatUuid(tableIdNoFormat.slice(2));
-
-      console.log('created list table with uuid: ' + listTableId);
-      context.commit('set', {key: 'listTableId', value: listTableId || ''});
-      const listTable = await runQuery(sql.selectListTable(), listTableId) as any;
-      if (!listTable.error) {
-        context.commit('set', {key: 'listTable', value: parseRpcResponse(listTable.result.data)});
-        listTableExists = true;
-      }
-    }
-
-    // Save there their tables for later, if a table doesn't exist they can use the button to create a table...
-    const listTables = context.state.listTable ? tables.map((registryData: any) => {
-      const list = context.state.listTable.find((list: any) => compareUuids(list.uuid, registryData.uuid));
-
-      return list;
-    }).filter((t: any) => t) : [];
-    context.commit('set', {key: 'allTables', value: listTables});
   },
-  loadTable: async function (context, params: {tableId: string, name: string}) {
-    console.log(params);
-    const tableUuid = params.tableId.includes('-') ? params.tableId : formatUuid(params.tableId);
-    const res = await runQuery(sql.selectTodoTable(params.name), tableUuid) as any;
+  loadTable: async function (context, params: {name: string}) {
+    try {
+      const tableland = await getConnection();
+      const queryableName = `${params.name}`;
+      const res = await tableland.query(sql.selectTodoTable(queryableName)) as any;
 
-    if (res.error) {
-      console.log(res.error);
-      return res.error;
+      const tasks = parseRpcResponse(res.data);
+
+      context.commit('set', {key: 'tasks', value: tasks || []});
+
+      context.commit('set', {key: 'currentQueryableName', value: queryableName});
+      const currentTable = context.state.listTable.find((list: any) => list.table_name === queryableName);
+      if (currentTable && currentTable.list_name) {
+        context.commit('set', {key: 'currentTableName', value: currentTable.list_name});
+      }
+    } catch (err) {
+      throw err;
     }
-
-    const tasks = parseRpcResponse(res.result.data);
-
-    context.commit('set', {key: 'tasks', value: tasks || []});
-    context.commit('set', {key: 'currentTableId', value: params.tableId});
-    context.commit('set', {key: 'currentTableName', value: params.name});
   },
   createTask: async function (context) {
-    const task = {complete: false, name: '', id: getNextId(context.state.tasks)};
+    try {
+      const task = {complete: false, name: '', id: getNextId(context.state.tasks)};
+      const tableland = await getConnection();
 
-    // send off async request to Tableland
-    const res = await runQuery(sql.insertTask(context.state.currentTableName, task), context.state.currentTableId) as any;
+      // send off async request to Tableland
+      const res = await tableland.query(sql.insertTask(context.state.currentQueryableName, task)) as any;
 
-    if (res.error) {
-      console.log(res.error);
-      return new Error(res.error.message);
+      if (res.error) {
+        console.log(res.error);
+        await context.dispatch('loadTable', {name: context.state.currentQueryableName});
+        return new Error(res.error.message);
+      }
+
+      await context.dispatch('loadTable', {name: context.state.currentQueryableName});
+      return task;
+    } catch (err) {
+      throw err;
     }
-
-    await context.dispatch('loadTable', {name: context.state.currentTableName, tableId: context.state.currentTableId});
-    return task;
   },
   updateTask: async function (context, task: Task) {
-    console.log(task);
-    const res = await runQuery(sql.updateTask(context.state.currentTableName, task), context.state.currentTableId) as any;
+    try {
+      const tableland = await getConnection();
+      const res = await tableland.query(sql.updateTask(context.state.currentQueryableName, task)) as any;
 
-    if (res.error) {
-      console.log(res.error);
-      return new Error(res.error.message);
+      await context.dispatch('loadTable', {name: context.state.currentQueryableName});
+    } catch (err) {
+      throw err;
     }
-
-    await context.dispatch('loadTable', {name: context.state.currentTableName, tableId: context.state.currentTableId});
   },
   deleteTask: async function (context, task: Task) {
-    console.log(task);
-    const res = await runQuery(sql.deleteTask(context.state.currentTableName, task.id), context.state.currentTableId) as any;
+    try {
+      const tableland = await getConnection();
 
-    if (res.error) {
-      console.log(res.error);
-      return new Error(res.error.message);
+      const res = await tableland.query(sql.deleteTask(context.state.currentQueryableName, task.id)) as any;
+
+      await context.dispatch('loadTable', {name: context.state.currentQueryableName});
+    } catch (err) {
+      throw err;
     }
-
-    await context.dispatch('loadTable', {name: context.state.currentTableName, tableId: context.state.currentTableId});
-    await context.dispatch('loadTableDeleted');
   }
 };
 
@@ -207,30 +234,58 @@ const formatUuid = function (val: string) {
   return [val.slice(0, 8), val.slice(8, 12), val.slice(12, 16), val.slice(16, 20), val.slice(20)].join('-');
 };
 
-const listTableName = 'todo_app_list_table';
+// this is here for reference only. Creating the table that holds all lists only happens once ever when this app is built
+const listTablePrefix = 'todo_app_example_';
+
+/*
+ *
+ * list_name TEXT, table_name TEXT, table_id TEXT, table_controller TEXT
+ *
+ */
 const sql = {
-  createTable: (name: string) => `CREATE TABLE ${name} (
+  createList: (name: string) => `CREATE TABLE ${name} (
     complete BOOLEAN DEFAULT false,
     name     VARCHAR DEFAULT '',
     deleted  BOOLEAN DEFAULT false,
-    id       SERIAL
-  );`,
-  createListTable: () => `CREATE TABLE ${listTableName} (
-    list_name VARCHAR NOT NULL,
-    uuid VARCHAR NOT NULL
+    id       INTEGER UNIQUE
   );`,
   deleteTask: (name: string, taskId: number) => `
     UPDATE ${name} SET deleted = true WHERE id = ${taskId};
   `,
-  insertList: (name: string, uuid: string) => `INSERT INTO ${listTableName}(list_name, uuid) VALUES ('${name}', '${uuid}');`,
+  insertList: (params: {
+    listTableName: string,
+    listName: string,
+    tableName: string,
+    tableId: string
+  }) => `
+    INSERT INTO ${params.listTableName}(
+      list_name,
+      table_name,
+      table_id
+    ) VALUES (
+      '${params.listName}',
+      '${params.tableName}',
+      '${params.tableId}'
+    );
+  `,
   insertTask: (tableName: string, task: {complete: boolean, name: string, id: number}) => `
     INSERT INTO ${tableName}(complete, name, id) VALUES (${task.complete}, '${task.name}', ${task.id});
   `,
-  selectListTable: () => `SELECT * FROM ${listTableName}`,
-  selectTodoTable: (name: string) => `SELECT * FROM ${name}
-    ORDER BY id ASC;
-  `,
+  createListTable: (controllerAddress: string) => `CREATE TABLE ${listTablePrefix}_${controllerAddress.slice(2,10).toLowerCase()} (
+    list_name TEXT,
+    table_name TEXT,
+    table_id TEXT,
+    table_controller TEXT
+  );`,
+  selectListTable: (listTableName: string) => `SELECT * FROM ${listTableName};`,
+  selectTodoTable: (name: string) => `SELECT * FROM ${name} ORDER BY id ASC;`,
   updateTask: (name: string, task: {complete: boolean, name: string, id: number}) => `
     UPDATE ${name} SET complete = ${task.complete}, name = '${task.name}' WHERE id = ${task.id};
   `
+};
+
+const wait = function (ms: number) {
+  return new Promise(function (resolve, reject) {
+    setTimeout(() => resolve(void 0), ms);
+  });
 };
