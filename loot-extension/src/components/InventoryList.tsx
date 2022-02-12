@@ -1,13 +1,16 @@
-import { runQuery } from '@textile/tableland';
+import { Connection } from '@textile/tableland';
+import { tbl } from '../lib/connectToLoot';
 import { useSelector, useDispatch } from 'react-redux';
 import { inventorySlots } from '../lib/consts';
 import { InsertOrUpdate } from '../lib/queries';
 import { equipItem } from '../store/lootEquipped';
 
 function InventoryList() {
+    const myBags: any = useSelector<any>(state => state.myBags.value);
     const myLoot: any = useSelector<any>(state => state.myLoot.value);
     const lootEquipped: any = useSelector<any>(state => state.lootEquipped.value);
-    const myBags: Array<number> = [1200,1279,1555,0];
+    const equippedTableName: any = useSelector<any>(state => state.equippedTableName.value);
+
     const dispatch = useDispatch();
     if(myLoot.length === 0) return null;
   
@@ -50,9 +53,9 @@ function InventoryList() {
               <td>{component.charm}</td>
               <td className='switch-items'><select className='custom-select' onChange={(e)=>{
                 dispatch(equipItem({key, bag:e.target.value}));
-                let updateSlot = InsertOrUpdate("LootEquipped_0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", inventorySlots[key], e.target.value);
-                runQuery(updateSlot, "d9163b48670f4549813a6f66888bc1fb");
-              }} value={lootEquipped[key]}><option>Empty</option><option>synthetic</option>{myBags.map(bag => {
+                let updateSlot = InsertOrUpdate(equippedTableName, inventorySlots[key], e.target.value);
+                (tbl as Connection).query(updateSlot);
+              }} value={lootEquipped[key]}><option>Empty</option><option>synthetic</option>{myBags.map((bag:number) => {
                 return <option key={bag}>loot@{bag}</option>                
               })}
                 

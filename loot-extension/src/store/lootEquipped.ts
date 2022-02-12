@@ -4,7 +4,8 @@ import * as _ from "lodash";
 
 interface EquippedRow {
   0: string,
-  1: string
+  1: string,
+  2: string
 }
 
 interface EquippedRows extends Array<any> {
@@ -16,9 +17,9 @@ function parseEquipped(db:EquippedRows, equipped: Array<string>): Array<string> 
 
 
   inventorySlots.forEach((slot, key) => {
-    const index = db.findIndex((rowFromEquipped: any) => slot===rowFromEquipped[0]);
+    const index = db.findIndex((rowFromEquipped: any) => slot===rowFromEquipped[1]);
     if(index!==-1) {
-      equipped[key] = db[index][1];
+      equipped[key] = db[index][2];
     }
   });
 
@@ -42,11 +43,11 @@ export const counterSlice = createSlice({
   reducers: {
     equipLoot: (state: any, action:any) => {
       let stateOld = _.clone(state);
-      state.value = parseEquipped(action.payload.result.data.rows, stateOld);
+      state.value = parseEquipped(action.payload.data.rows, stateOld.value);
     },
     equipItem: (state: any, action:any) => {
 
-      state.value[action.payload.key] = action.payload.bag;
+      state.value[parseInt(action.payload.key)] = action.payload.bag;
     }
   }
 });

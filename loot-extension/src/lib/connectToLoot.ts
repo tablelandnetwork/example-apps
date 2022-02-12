@@ -1,39 +1,42 @@
-import { connect, myTables, createTable, runQuery } from "@textile/tableland";
+import { connect, Connection } from "@textile/tableland";
 import { Dispatch } from 'react';
 import { hydrate } from "../store/lootAttributes";
 import { equipLoot } from "../store/lootEquipped";
 import { hydrateLoot } from "../store/myLoot";
-import { fauxEquippedToken, fauxLootTableId, fauxLootTableName, fauxPubSig } from "./fauxnstants";
 import { getLoot } from "./getLoot";
 import { CreateEquippedTable, SelectAll } from "./queries";
 import { LootBag } from './getLoot';
 import assessLoot from "./assessLoot";
-import { ethers, Signer } from "ethers";
-let signer: Signer;
+import { setName } from '../store/equippedTableName';
 
-export default async function connectToLoot(dispatch: Dispatch<any>) {
-    await connect('https://testnet.tableland.network');
-    let lootAttr = (await (runQuery(SelectAll(fauxLootTableName), fauxLootTableId)) as any).result.data.rows;
-    const provider = new ethers.providers.Web3Provider((window as any).ethereum, "any");
-    signer = provider.getSigner();
-    let myLootStatus = (await (runQuery(`SELECT * FROM LootEquipped_${await signer.getAddress()}`, fauxEquippedToken) as any));
-    
-    
+export let tbl: null | Connection = null; 
+
+export default async function connectToLoot(dispatch: Dispatch<any>, bags: Array<number>) {
+    tbl = await connect({network: 'testnet', host: 'https://testnet.tableland.network'});
+    let lootAttr = (await (tbl.query(SelectAll())) as any).data.rows;
+
   
     let tables: any[];
+  
+    tables = await tbl.list();
 
-    tables = await myTables();
-
-    tables = tables.filter((table: {name: string}, ) => table.name==="LootProjectInventory");  
+    tables = tables.filter((table: {name: string, structure: string}, ) => table.structure==="e9d6a97954e91f68ae411cee2782f21aadaa02460969dd818dba2e3aec7e9bcb");
+    
+    let myLootStatus;
     
     if(tables.length===0) {
   
-      createTable(CreateEquippedTable((await connect('https://testnet.tableland.network')).ethAccounts[0]), {type:"LootProjectInventory"});
+      let { name } = await tbl.create(CreateEquippedTable(), {description:"Loot Project Inventory"});
+      dispatch(setName(name));
+    } else {
+      dispatch(setName(tables[0].name));
+      myLootStatus = (await (tbl.query(`SELECT * FROM ${tables[0].name}`) as any));
     }
-    let loot: LootBag[] = await getLoot([1200,1279,1555,0]);  
+    let loot: LootBag[] = await getLoot(bags);  
     dispatch(hydrate(lootAttr));
     dispatch(hydrateLoot(assessLoot(lootAttr, loot, myLootStatus)));
     dispatch(equipLoot(myLootStatus));
+    return;
   
   }
   

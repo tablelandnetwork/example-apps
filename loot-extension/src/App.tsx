@@ -1,30 +1,44 @@
 import './App.css';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import InventoryList from './components/InventoryList';
-import { Helmet } from 'react-helmet';
 import connectToLoot from './lib/connectToLoot';
+import {  updateMyBags } from './store/myLootBags';
+import BagsList from './components/BagsList';
+import { useEffect, useState } from 'react';
 
 
+function csvToArray(val:string) {
+  return JSON.parse(`[${val.replace(/,\s*$/, "")}]`);
+}
 
 function App() {
-
-
+  const myBags: any = useSelector<any>(state => state.myBags.value);
+  let [connectedStatus, setConnectedStatus] = useState("no");
+  
   const dispatch = useDispatch();
+  useEffect(() => {
+    document.title = 'Loot Equipped';
+  });
+  useEffect(() => {
 
+    if(connectedStatus==="please-start") {
+      let connectUs = async () => {
+        setConnectedStatus("started");
+        const connected = await connectToLoot(dispatch, myBags);
+        setConnectedStatus("connected");
+        return connected;
+      }
+      connectUs();
+
+    }
+  }, [connectedStatus, dispatch, myBags]);
+  
 
   return (
     <div className="App">
-        <Helmet>
-          <title>Loot Equipped</title>
-        </Helmet>
       <header className="App-header">
         <h1>Loot Equipped</h1>
-        <button onClick={async (e) => {
-            
-            if(e.target instanceof Element) e.target.remove();
-            connectToLoot(dispatch);        
 
-          }}>Connect</button>
       </header>
       <main>
         <div className="App-intro App-section">
@@ -38,7 +52,16 @@ function App() {
           </p>
         </div>
         <div className="App-section">
+          <label>Comma seperated list of bags you own (or would like to own). Fill in before hitting connect. TY.
+          
+          <input type="text" defaultValue={JSON.stringify(myBags).slice(1,-1)} onChange={e=>dispatch(updateMyBags(csvToArray(e.target.value)))} ></input></label>
+              <h2>{connectedStatus}</h2>
+          <BagsList></BagsList>
+          <button onClick={async (e) => {
+            
+            setConnectedStatus("please-start");
 
+          }}>Let's go</button>
           <InventoryList />
         </div>
 

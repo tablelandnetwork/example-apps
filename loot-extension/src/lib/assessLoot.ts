@@ -16,12 +16,12 @@ export default function assessLoot(lootAttrs: Array<Array<string | number>>, myL
         }
         component.forEach(componentPiece => {
           
-          let attrs = lootAttrs.find(componentPieceQuestionMark => componentPieceQuestionMark[0] === componentPiece);
+          let attrs = lootAttrs.find(componentPieceQuestionMark => componentPieceQuestionMark[1] === componentPiece);
           if(!attrs) return;
-          componentComputed.strength += (attrs[1] as number);
-          componentComputed.speed += (attrs[2] as number);
-          componentComputed.stealth += (attrs[3] as number);
-          componentComputed.charm += (attrs[4] as number);
+          componentComputed.strength += (attrs[2] as number);
+          componentComputed.speed += (attrs[3] as number);
+          componentComputed.stealth += (attrs[4] as number);
+          componentComputed.charm += (attrs[5] as number);
   
         });
   

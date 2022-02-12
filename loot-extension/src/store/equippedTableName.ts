@@ -1,21 +1,18 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-
-
 export const counterSlice = createSlice({
-  name: 'myBags',
+  name: 'equippedTableName',
   initialState: {
-    value: [867, 5309, 1278] as any
+    value: 0
   },
   reducers: {
-    updateMyBags: (state, action) => {
-        
+    setName: (state, action) => {
         state.value = action.payload;
     },
   }
 });
 
 // Action creators are generated for each case reducer function
-export const { updateMyBags } = counterSlice.actions
+export const { setName } = counterSlice.actions
 
 export default counterSlice.reducer;

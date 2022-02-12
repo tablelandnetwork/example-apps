@@ -1,8 +1,9 @@
 import sLootAbi from './sLootAbi.json';
 import lootAbi from './lootAbi.json';
 import lootProperties from './lootItemComponents.json';
-import { ethers, Signer } from 'ethers';
+import { ethers, providers, Signer } from 'ethers';
 let signer: Signer;
+let providerMain:any;
 
 const synthLoot = {
   "address": "0x869Ad3Dfb0F9ACB9094BA85228008981BE6DBddE",
@@ -42,7 +43,7 @@ export interface LootComponent extends Array<any> {
 
 
 async function GetSyntheticLoot() {
-    const sLootContract = new ethers.Contract(synthLoot.address, synthLoot.abi, signer);
+    const sLootContract = new ethers.Contract(synthLoot.address, synthLoot.abi, providerMain);
     let userAddress = await signer.getAddress();
     let synth = await Promise.all([
         sLootContract.weaponComponents(userAddress),
@@ -61,11 +62,12 @@ async function GetSyntheticLoot() {
 
 
 async function GetRealLoot(bags: number[]) {
+    providerMain = new ethers.providers.InfuraProvider("mainnet", "92f6902cf1214401ae5b08a1e117eb91");
     const provider = new ethers.providers.Web3Provider((window as any).ethereum, "any");
     signer = provider.getSigner();
     
 
-    const lootContract = new ethers.Contract(loot.address, loot.abi, signer);
+    const lootContract = new ethers.Contract(loot.address, loot.abi, providerMain);
 
 
 
