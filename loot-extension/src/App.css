@@ -1,0 +1,148 @@
+body {
+  background-color:#1a1a1a;
+  color: white;
+  font-family: Inconsolata,monospace;
+  
+}
+
+.switch-items {
+  text-align: center;
+  text-transform: capitalize;
+}
+.switch-items>.buttons {
+  display: flex;
+  justify-content: stretch;
+  flex-direction: row;
+  padding: 0px 10px;
+
+}
+.switch-items button {
+  width: 100%;
+}
+
+main {
+  background-color: #000;
+  min-height: 100vh;
+}
+main>.App-intro {
+  background-color: #000;
+}
+
+h1, h2, h3, h4, h5, h6, .title, th, button {
+  font-family: EB Garamond,serif,sans-serif;
+  text-align: center;
+}
+
+th {
+  background-color: rgba(97,97,97, 1);
+}
+
+.App-section {
+  /* text-align: center; */
+  max-width: 90vw;
+  display: grid;
+  grid-template-columns: 1fr minmax(400px, 800px) 1fr;
+  font-size: 22px;
+  padding: 20px;
+
+  margin: auto;
+}
+
+.App-section>* {
+  grid-column: 2 / 3;
+}
+
+tr{
+  display:table;
+  width: calc(100% - 40px);
+  max-width: 1800px;
+  margin: 10px 20px;
+  table-layout:fixed;
+}
+
+td, th[scope="row"] {
+  border: 4px outset #111;
+  background-color: #222;
+  padding: 5px 10px;
+  
+}
+
+.App-logo {
+  height: 10vmin;
+  pointer-events: none;
+}
+
+.App-section>table {
+  border-collapse: collapse;
+  grid-column: 1 / -1;
+  margin: 0 auto;
+
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    /* animation: App-logo-spin infinite 20s linear; */
+  }
+}
+
+.App-intro {
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+}
+
+.App-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(0,0,0,.9);
+  padding: 5px 40px;
+}
+
+
+button {
+  background: #111;
+  color: #969696;
+  padding: 8px;
+  border: 1px solid #222;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+button:hover {
+  background-color: #222;
+}
+
+
+/*the container must be positioned relative:*/
+select {
+  color: white;
+  background-color: #111;
+  border: 0px solid #111;
+  border-radius: 1px;
+  height: 100%;
+  width: 100%;
+  padding: 5px;
+}
+
+.bag-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 20px 10px;
+}
+
+.bag-visual {
+  margin: 0px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: url("./../public/bag.png");
+  background-size: contain; 
+  background-repeat: no-repeat;
+  height: 150px;
+  width: 150px;
+  padding-top: 60px;
+  background-position: center;
+}
