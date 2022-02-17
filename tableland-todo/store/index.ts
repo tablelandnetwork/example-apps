@@ -1,5 +1,4 @@
 import { ActionTree, GetterTree, MutationTree } from 'vuex';
-import { ethers } from 'ethers';
 import { connect } from '@textile/tableland';
 
 
@@ -24,6 +23,7 @@ export const state = function () {
   };
 };
 
+// store the tableland connection as a private plain Object
 const getConnection = function () {
   let connection: any;
   return async function (options?: any) {
@@ -258,7 +258,7 @@ const sql = {
     tableName: string,
     tableId: string
   }) => `
-    INSERT INTO ${params.listTableName}(
+    INSERT INTO ${params.listTableName} (
       list_name,
       table_name,
       table_id
@@ -269,7 +269,7 @@ const sql = {
     );
   `,
   insertTask: (tableName: string, task: {complete: boolean, name: string, id: number}) => `
-    INSERT INTO ${tableName}(complete, name, id) VALUES (${task.complete}, '${task.name}', ${task.id});
+    INSERT INTO ${tableName} (complete, name, id) VALUES (${task.complete}, '${task.name}', ${task.id});
   `,
   createListTable: (controllerAddress: string) => `CREATE TABLE ${listTablePrefix}_${controllerAddress.slice(2,10).toLowerCase()} (
     list_name TEXT,
