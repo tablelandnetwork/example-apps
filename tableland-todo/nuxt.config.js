@@ -44,18 +44,11 @@ export default {
     // https://go.nuxtjs.dev/typescript
     '@nuxt/typescript-build',
     // https://go.nuxtjs.dev/tailwindcss
-    '@nuxtjs/tailwindcss',
-    '@nuxtjs/color-mode'
+    '@nuxtjs/tailwindcss'
   ],
 
   // Modules: https://go.nuxtjs.dev/config-modules
-  modules: [
-    '~/modules/nuxt-module-ipfs'
-  ],
-
-  router: {
-    base: process.env.NODE_ENV === 'development' ? '/' : '/ipfs/hash/'
-  },
+  modules: [],
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {

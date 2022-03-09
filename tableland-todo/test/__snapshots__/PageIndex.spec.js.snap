@@ -8,44 +8,12 @@ exports[`Index Page renders correctly 1`] = `
     class="ml-4 mt-8 flex justify-between"
   >
     <div>
-      <img
-        alt="TODO: get a tableland logo"
-        class="w-20 inline"
-        src="@/static/logo.svg"
-      />
-       
       <div
-        class="relative inline h-20 w-20 mr-10"
+        class="items-center mr-10 mt-4 font-bold text-orbitron text-3xl"
       >
-        <div
-          class="absolute -bottom-10 -left-5 font-bold"
-        >
-          
-          ableland
         
-        </div>
-      </div>
-       
-      <span
-        class="mr-8"
-      />
-       
-      <img
-        alt="TODO: get a tableland logo"
-        class="w-20 inline"
-        src="@/static/logo.svg"
-      />
-       
-      <div
-        class="relative inline h-20 w-20 mr-10"
-      >
-        <div
-          class="absolute -bottom-10 -left-5 font-bold"
-        >
-          
-          odos
-        
-        </div>
+        Tableland Todos
+      
       </div>
     </div>
      
@@ -56,7 +24,7 @@ exports[`Index Page renders correctly 1`] = `
         class="flex"
       >
         <button
-          class="relative leading-tight font-button border transition-colors duration-150 focus:outline-none shadow-sm border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-gray-500 dark:active:border-gray-300 cursor-pointer  px-5 py-2 rounded-button float-right"
+          class="relative leading-tight font-button border transition-colors duration-150 focus:outline-none shadow-sm border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-gray-500 dark:active:border-gray-300 cursor-pointer  px-5 py-2 rounded-button float-right text-poppins"
           type="button"
         >
           <!---->
@@ -66,24 +34,14 @@ exports[`Index Page renders correctly 1`] = `
           >
             <span>
               
-            Connect MetaMask 
-              <img
-                alt="MetaMask Fox"
-                class="inline"
-                src="@/static/metamask-fox.svg"
-              />
+            Connect to Tableland
+          
             </span>
              
             <!---->
           </span>
           <!---->
         </button>
-      </div>
-       
-      <div
-        class="mt-2 w-60 h-8 truncate text-gray-500"
-      >
-        <!---->
       </div>
     </div>
   </div>
@@ -92,23 +50,29 @@ exports[`Index Page renders correctly 1`] = `
     class="border-gray-200 dark:border-gray-800 my-8"
   />
    
-  <div>
-    <h1
-      class="leading-tight text-2xl sm:text-3xl md:text-4xl font-bold mt-16 m-8"
+  <div
+    class="container mx-auto"
+  >
+    <div
+      class="justify-center flex"
     >
-      Howdy, Yonder Lies Tableland
-    </h1>
-     
-    <h1
-      class="leading-tight text-lg sm:text-xl text-center"
-    >
+      <button
+        class="relative leading-tight font-button border transition-colors duration-150 focus:outline-none shadow-sm border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-gray-500 dark:active:border-gray-300 cursor-pointer  px-5 py-2 rounded-button text-poppins"
+        type="button"
+      >
+        <!---->
+        <!---->
+        <span
+          class=""
+        >
+          
+        Connect to Tableland
       
-      To get started you'll need to connect to Metamask so we know who you are.  Please use the button in the page header to connect by signing a nonce.
-    
-    </h1>
+        </span>
+        <!---->
+      </button>
+    </div>
   </div>
-   
-  <!---->
    
   <!---->
    

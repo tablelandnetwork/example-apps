@@ -38,6 +38,8 @@
 import Vue from 'vue';
 import { mapState } from 'vuex';
 
+import { getErrorMessage } from '@/utils/index';
+
 export default Vue.extend({
   data: function () {
     return {
@@ -63,24 +65,38 @@ export default Vue.extend({
   },
   methods: {
     createTable: async function () {
-      if (!this.newName) {
-        await this.$store.dispatch('alert', {message: 'Please Choose a name for your list'});
-        return;
+      try {
+        if (!this.newName) {
+          await this.$store.dispatch('alert', {message: 'Please Choose a name for your list'});
+          return;
+        }
+
+        if (this.invalidName) {
+          await this.$store.dispatch('alert', {message: 'Sorry the name you chose is not valid. Please make sure the name states with a letter, and only contains letters numbers and the underscore.  Also, names must be unique, so make sure the name isn\'t already being used'});
+          return;
+        }
+
+        this.loading = true;
+
+        const table = await this.$store.dispatch('createList', {name: this.newName});
+        this.newName = '';
+        this.loading = false;
+      } catch (err) {
+        console.log(err);
+        await this.$store.dispatch('alert', {
+          message: getErrorMessage(err)
+        });
       }
-
-      if (this.invalidName) {
-        await this.$store.dispatch('alert', {message: 'Sorry the name you chose is not valid. Please make sure the name states with a letter, and only contains letters numbers and the underscore.  Also, names must be unique, so make sure the name isn\'t already being used'});
-        return;
-      }
-
-      this.loading = true;
-
-      const table = await this.$store.dispatch('createList', {name: this.newName});
-      this.newName = '';
-      this.loading = false;
     },
     loadTable: async function (table: any) {
-      await this.$store.dispatch('loadTable', {name: table.table_name});
+      try {
+        await this.$store.dispatch('loadTable', {name: table.table_name});
+      } catch (err) {
+        console.log(err);
+        await this.$store.dispatch('alert', {
+          message: getErrorMessage(err)
+        });
+      }
     }
   }
 });
