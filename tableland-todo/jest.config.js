@@ -1,9 +1,8 @@
 module.exports = {
-
+  globalSetup: '<rootDir>/test/global.setup.js',
   setupFilesAfterEnv: ['./jest.setup.js'],
-  preset: '@nuxt/test-utils',
-
   moduleNameMapper: {
+    "^@textile/tableland$": "<rootDir>/test/mock_modules/tableland",
     '^@/(.*)$': '<rootDir>/$1',
     '^~/(.*)$': '<rootDir>/$1',
     '^vue$': 'vue/dist/vue.common.js'
@@ -15,7 +14,7 @@ module.exports = {
     'json'
   ],
   transform: {
-    "^.+\\.ts$": "ts-jest",
+    "^.+\\.ts$": "babel-jest",
     '^.+\\.js$': 'babel-jest',
     '.*\\.(vue)$': 'vue-jest'
   },

@@ -97,6 +97,7 @@ import { mapState } from 'vuex';
 
 // types
 import { Task, RootState } from '@/store/index';
+import { getErrorMessage } from '@/utils/index';
 
 interface MemTask extends Task {
   dirty: boolean;
@@ -159,6 +160,9 @@ export default Vue.extend({
         this.loading = false;
       } catch (err) {
         console.log(err);
+        await this.$store.dispatch('alert', {
+          message: getErrorMessage(err)
+        });
       }
     },
     updateTask: async function (update: any, task: MemTask) {
@@ -167,6 +171,9 @@ export default Vue.extend({
         await this.$store.dispatch('updateTask', {...task, ...update});
       } catch (err) {
         console.log(err);
+        await this.$store.dispatch('alert', {
+          message: getErrorMessage(err)
+        });
       }
     },
     deleteTask: async function (task: MemTask) {
@@ -174,6 +181,9 @@ export default Vue.extend({
         await this.$store.dispatch('deleteTask', task);
       } catch (err) {
         console.log(err);
+        await this.$store.dispatch('alert', {
+          message: getErrorMessage(err)
+        });
       }
     },
     tasksAreSame: function (a: Task | MemTask, b: Task | MemTask) {
@@ -185,12 +195,19 @@ export default Vue.extend({
       return true;
     },
     toggleAll: async function () {
-      console.log('toggle');
-      const allChecked = this.allChecked;
+      try {
+        console.log('toggle');
+        const allChecked = this.allChecked;
 
-      for (let i = 0; i < this.tasksInMem.length; i++) {
-        const task = this.tasksInMem[i];
-        await this.updateTask({complete: !allChecked}, task)
+        for (let i = 0; i < this.tasksInMem.length; i++) {
+          const task = this.tasksInMem[i];
+          await this.updateTask({complete: !allChecked}, task)
+        }
+      } catch (err) {
+        console.log(err);
+        await this.$store.dispatch('alert', {
+          message: getErrorMessage(err)
+        });
       }
     },
     showDeleted: async function () {
