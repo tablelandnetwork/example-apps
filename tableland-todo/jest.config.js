@@ -2,7 +2,7 @@ module.exports = {
   globalSetup: '<rootDir>/test/global.setup.js',
   setupFilesAfterEnv: ['./jest.setup.js'],
   moduleNameMapper: {
-    "^@textile/tableland$": "<rootDir>/test/mock_modules/tableland",
+    "^@tableland/sdk$": "<rootDir>/test/mock_modules/tableland",
     '^@/(.*)$': '<rootDir>/$1',
     '^~/(.*)$': '<rootDir>/$1',
     '^vue$': 'vue/dist/vue.common.js'
