@@ -1,5 +1,5 @@
 import { ActionTree, GetterTree, MutationTree } from 'vuex';
-import { connect } from '@textile/tableland';
+import { connect } from '@tableland/sdk';
 
 
 

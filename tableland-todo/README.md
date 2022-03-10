@@ -3,7 +3,7 @@
 
 The initial goal of this project is to serve as a base level POC for Tableland.
 
-![arch diagram](https://github.com/textileio/tableland-example-apps/blob/main/tableland-todo/utils/todos-arch-diagram.png?raw=true)
+![arch diagram](https://github.com/tablelandnetwork/example-apps/blob/main/tableland-todo/utils/todos-arch-diagram.png?raw=true)
 
 
 
