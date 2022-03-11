@@ -115,18 +115,14 @@ export default Vue.extend({
       metaMaskConnected: false as boolean,
       tablelandConnected: false as boolean,
       loading: false as boolean,
-      ethAddress: null as any
+      ethAddress: null as any,
+      onRinkeby: false as boolean
     };
   },
   computed: {
     ...mapState({
       tables: (state: any) => state.allTables,
-      toastMessage: (state: any) => state.alertMessage,
-      onRinkeby: function (state: any) {
-        const chainId = (window as any).ethereum?.chainId;
-        console.log(chainId);
-        return chainId === '0x4';
-      }
+      toastMessage: (state: any) => state.alertMessage
     })
   },
   watch: {
@@ -138,7 +134,7 @@ export default Vue.extend({
   methods: {
     connect: async function () {
       if (this.loading) return;
-      if (!this.onRinkeby) return;
+      if (!this.checkNetwork()) return;
 
       this.loading = true;
 
@@ -161,11 +157,20 @@ export default Vue.extend({
     // One messaging toaster at the page level to ensure layout doesn't affect visibility
     showToast: function (message: string) {
       (this.$refs.toast as any).log(message);
+    },
+    checkNetwork: function () {
+      const chainId = (window as any).ethereum?.chainId;
+
+      this.onRinkeby = chainId === '0x4';
+
+      return this.onRinkeby;
     }
   },
   mounted: function () {
     // use dark theme
     document.getElementsByTagName('html')[0].setAttribute('class', 'dark dark-mode');
+    // ensure computed is recalculated after ethereum object has had a chance to be injected
+    this.checkNetwork();
   }
 });
 
