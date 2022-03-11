@@ -1,6 +1,7 @@
 export default {
   env: {
-    validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network'
+    validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network',
+    validatorNet: process.env.NETWORK || 'testnet'
   },
   // Disable server-side rendering: https://go.nuxtjs.dev/ssr-mode
   ssr: false,
