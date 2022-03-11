@@ -116,7 +116,7 @@ export default Vue.extend({
       tablelandConnected: false as boolean,
       loading: false as boolean,
       ethAddress: null as any,
-      onRinkeby: false as boolean
+      onRinkeby: true as boolean
     };
   },
   computed: {
@@ -170,7 +170,9 @@ export default Vue.extend({
     // use dark theme
     document.getElementsByTagName('html')[0].setAttribute('class', 'dark dark-mode');
     // ensure computed is recalculated after ethereum object has had a chance to be injected
-    this.checkNetwork();
+    setTimeout(() => {
+      this.checkNetwork();
+    }, 500);
   }
 });
 
