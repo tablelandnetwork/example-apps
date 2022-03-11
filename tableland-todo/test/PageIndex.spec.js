@@ -5,6 +5,7 @@ import flushPromises from 'flush-promises';
 
 import { registerComponents } from './setup';
 
+window.ethereum = {chainId: '0x4'};
 
 describe('Index Page', function () {
   setupTest({

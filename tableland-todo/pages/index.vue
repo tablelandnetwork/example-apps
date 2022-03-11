@@ -12,7 +12,7 @@
           <MjButton
             variant="secondary"
             :loading="loading"
-            :disabled="tablelandConnected"
+            :disabled="tablelandConnected || !onRinkeby"
             @click="connect"
             class="float-right text-poppins"
           >
@@ -30,11 +30,15 @@
     <MjDivider class="my-8"></MjDivider>
 
     <MjContainer v-if="!tablelandConnected">
+      <MjNote v-if="!onRinkeby" variant="danger" class="mb-4">
+        You're not connected to Rinkeby Testnet where the Tableland Smart Contract is Deployed. To use this app change your wallet's network to Rinkeby and refresh the page this before proceeding.
+      </MjNote>
+
       <MjRow class="justify-center">
         <MjButton
           variant="secondary"
           :loading="loading"
-          :disabled="tablelandConnected"
+          :disabled="tablelandConnected || !onRinkeby"
           @click="connect"
           class="text-poppins"
         >
@@ -117,7 +121,12 @@ export default Vue.extend({
   computed: {
     ...mapState({
       tables: (state: any) => state.allTables,
-      toastMessage: (state: any) => state.alertMessage
+      toastMessage: (state: any) => state.alertMessage,
+      onRinkeby: function (state: any) {
+        const chainId = (window as any).ethereum?.chainId;
+        console.log(chainId);
+        return chainId === '0x4';
+      }
     })
   },
   watch: {
@@ -129,6 +138,7 @@ export default Vue.extend({
   methods: {
     connect: async function () {
       if (this.loading) return;
+      if (!this.onRinkeby) return;
 
       this.loading = true;
 
