@@ -1,6 +1,9 @@
 <template>
   <div>
-    <Button v-if="!$store.connected" label="Connect" class="p-button-rounded" :disabled="connecting" @click="connect" />
+    <div v-if="!$store.connected">
+      <Button label="Connect" class="p-button-rounded" :disabled="connecting" @click="connect" />
+    </div>
+
     <Cactus v-if="$store.connected" />
   </div>
 </template>
@@ -11,17 +14,19 @@ import { mapStores } from 'pinia';
 import { store } from './store/index';
 
 export default {
-  /*data: function () {
+  data: function () {
     return {
-      connected: true
+      connecting: false
     };
-  },*/
+  },
   computed: {
     ...mapStores(store)
   },
   methods: {
     connect: async function () {
-      this.$store.connect();
+      this.connecting = true;
+      await this.$store.connect();
+      this.connecting = false;
     }
   }
 };
