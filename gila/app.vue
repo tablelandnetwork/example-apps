@@ -1,23 +1,27 @@
 <template>
   <div>
-    <Cactus v-if="connected" />
+    <Button v-if="!$store.connected" label="Connect" class="p-button-rounded" :disabled="connecting" @click="connect" />
+    <Cactus v-if="$store.connected" />
   </div>
 </template>
 
 <script lang="ts">
 
+import { mapStores } from 'pinia';
+import { store } from './store/index';
+
 export default {
-  data() {
+  /*data: function () {
     return {
       connected: true
     };
+  },*/
+  computed: {
+    ...mapStores(store)
   },
   methods: {
-    connect: function () {
-
-    },
-    createAccount: function () {
-      
+    connect: async function () {
+      this.$store.connect();
     }
   }
 };

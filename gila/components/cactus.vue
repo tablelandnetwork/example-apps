@@ -16,7 +16,7 @@
     </Dialog>
 
     <div class="w-3/4 mx-auto mt-16 grid justify-items-end">
-      <Button label="Tweet" icon="pi pi-plus p-button-rounded" @click="writingTweet = true" />
+      <Button label="Tweet" icon="pi pi-plus" class="p-button-rounded" @click="writingTweet = true" />
     </div>
     <Card v-for="tweet in tweets" class="w-3/4 mx-auto my-16">
       <template #title>
