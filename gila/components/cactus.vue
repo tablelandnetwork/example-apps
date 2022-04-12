@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto">
+  <div class="w-full">
 
     <Dialog :modal="true" v-model:visible="writingTweet" >
       <template #header>
@@ -15,12 +15,24 @@
       </template>
     </Dialog>
 
-    <div class="w-3/4 mx-auto mt-16 grid justify-items-end">
+    <div class="w-3/4 mx-auto mt-16 flex justify-between">
+      <div>
+        <h5>Find Accounts to follow</h5>
+        <AutoComplete
+          v-model="searchVal"
+          :suggestions="$store.searchedAccounts"
+          field="user_address"
+          @complete="searchAccounts($event)"
+          :delay="722"
+          @item-select="followAccount($event)"
+        />
+      </div>
+      
       <Button label="Tweet" icon="pi pi-plus" class="p-button-rounded" @click="writingTweet = true" />
     </div>
-    <Card v-for="tweet in tweets" class="w-3/4 mx-auto my-16">
+    <Card v-for="tweet in $store.myTweets" class="w-3/4 mx-auto my-16">
       <template #title>
-        <i class="pi pi-user mr-2" style="font-size: 2rem"></i> {{ tweet.nickname }}
+        <i class="pi pi-user mr-2" style="font-size: 2rem"></i> {{ tweet.username }}
         <span style="font-size: 0.7rem; font-weight: 200; " class="float-right">{{ tweet.created_at }}</span>
       </template>
       <template #content>
@@ -34,45 +46,49 @@
 
 <script lang="ts">
 
+import { mapStores } from 'pinia';
+import { store } from '../store/index';
+
 export default {
   data() {
     return {
       writingTweet: false,
       sendingTweet: false,
-      tweetText: '',
-      tweets: [
-        {
-          tweet: 'When we seek to understand water on earth there are two types of variables, units of time and units of water. Combining the units helps us quantify water: Gallons per minute, acre-feet per year, cubic-feet per second, inches per hour, etc.',
-          nickname: 'Mustalic Buetlon',
-          created_at: new Date('2022-02-22T22:22:22.222Z')
-        }, {
-          tweet: 'Barring Hindenburg style contraptions and catastrophes, it is not possible to create or destroy water. Unlike wealth, when we combine water and time, we do not get more or less water. Water is a net-zero resource. ',
-          nickname: 'Cristiano Bieber',
-          created_at: new Date('2022-02-22T22:22:22.222Z')
-        }, {
-          tweet: 'There is a reason why The Almond Board has funded 239 water research projects and counting. It is the same reason California households have $1 billion in unpaid water bills. It is the same reason forecasts are predicting over half a million acres of farmland will need to be fallowed in the San Joaquin valley. The reason is that the forgotten property of water, its net-zero nature, is being realized.',
-          nickname: 'Narendra Gaga',
-          created_at: new Date('2022-02-22T22:22:22.222Z')
-        }
-      ]
+      searching: null,
+      searchVal: null,
+      tweetText: ''
     };
   },
+  computed: {
+    ...mapStores(store)
+  },
   methods: {
-    initTweet: function () {
-
-    },
     sendTweet: async function () {
-      this.sendingTweet = true
-      setTimeout(() => {
-        this.tweets.unshift({
-          tweet: this.tweetText,
-          nickname: 'It\'s Me!',
-          created_at: new Date()
+      if (!this.tweetText) return;
+
+      try {
+        this.sendingTweet = true
+        await this.$store.tweet({
+          tweet: this.tweetText
+          // reploy to etc...
         });
-        this.writingTweet = false;
+      } catch (err) {
+        this.$store.alert(err.message);
         this.sendingTweet = false;
-        this.tweetText = '';
-      }, 3370);
+      }
+    },
+    searchAccounts: async function (eve) {
+      const addr = eve.query
+
+      await this.$store.findFollowers(addr);
+    },
+    followAccount: async function (eve) {
+      const account = eve.value;
+
+      this.searchVal = null;
+
+      await this.$store.followAccount(account);
+      this.$store.alert({severity: 'success', content: `You are following ${account.user_address}!`});
     }
   }
 };

@@ -5,7 +5,8 @@ import { defineNuxtConfig } from 'nuxt3'
 export default defineNuxtConfig({
   publicRuntimeConfig: {
     validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network',
-    validatorNet: process.env.NETWORK || 'testnet'
+    validatorNet: process.env.NETWORK || 'testnet',
+    accountService: process.env.SERVICE || 'localhost:1337'
   },
 
   ssr: false,
