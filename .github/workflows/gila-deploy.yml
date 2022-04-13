@@ -1,0 +1,28 @@
+name: "Textile Bucket - Deploy Tableland Gila App"
+on:
+  push:
+    branches:
+      - gila-deploy
+jobs:
+  deploy: # make sure the action works on a clean machine without building
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: push # push to a known bucket
+        id: bucket
+        uses: "textileio/github-action-buckets@master"
+        with:
+          key: ${{ secrets.BUCKET_KEY }}
+          secret: ${{ secrets.BUCKET_SECRET }}
+          bucket: "bafzbeieqsqoifcepagrxij5p77lwskbvwi2dbkteq6lpbjrevh24ib6s2u"
+          thread: "bafk5fx7otzdvv7wnjdbz2dmukxb63bbtg2fiih5gdlpj2z2eumlf63i"
+          path: "gila/frontend/.output/public"
+      - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
+      - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
+      - run: echo "ipfs link - ${{ steps.bucket.outputs.ipfsUrl }}"
+      - run: echo "ipns - ${{ steps.bucket.outputs.ipns }}"
+      - run: echo "ipns link - ${{ steps.bucket.outputs.ipnsUrl }}"
+      - run: echo "hub - ${{ steps.bucket.outputs.hub }}"
+      - run: echo "www - ${{ steps.bucket.outputs.www }}"
+
