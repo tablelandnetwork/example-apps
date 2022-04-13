@@ -39,15 +39,8 @@
       <Card v-for="tweet in $store.myTweets" class="w-3/4 mx-auto my-16">
         <template #title>
           <i class="pi pi-user mr-2 float-left" style="font-size: 2rem"></i>
-          <Inplace :closable="true" @close="updateNickname(tweet)">
-            <template #display>
-                {{ tweet.username }} <i class="pi pi-pencil"></i>
-            </template>
-            <template #content>
-              <InputText v-model.trim="nicknameVal" autoFocus />
-            </template>
-          </Inplace>
-          <span style="font-size: 0.7rem; font-weight: 200; " class="float-right">{{ tweet.created_at }}</span>
+          {{ tweet.username }} <i class="pi pi-pencil" @click="openNickname(tweet)"></i>
+          <span style="font-size: 0.7rem; font-weight: 200; " class="float-right">{{ $date(tweet.created_at) }}</span>
         </template>
         <template #content>
           <p>
@@ -55,6 +48,20 @@
           </p>
         </template>
       </Card>
+
+      <Dialog :modal="true" v-model:visible="editingNickname" >
+        <template #header>
+          <h3 class="text-xl font-bold">Assign a nickname:</h3>
+        </template>
+
+        <p class="mb-4">You can assign a nickname to each address. You will be the only one who sees the nickname.</p>
+
+        <template #footer>
+          <InputText v-model.trim="nicknameVal" class="float-left w-3/5" />
+          <Button label="Cancel" icon="pi pi-times" class="p-button-text" :disabled="sendingTweet" @click="closeNickname" />
+          <Button label="Submit" icon="pi pi-check" autofocus @click="updateNickname" />
+        </template>
+      </Dialog>
     </div>
   </div>
 </template>
@@ -74,7 +81,10 @@ export default {
       searching: null,
       searchVal: null,
       tweetText: '',
-      nicknameVal: ''
+
+      nicknameVal: '',
+      nicknameTweet: null,
+      editingNickname: false
     };
   },
   computed: {
@@ -100,8 +110,19 @@ export default {
         this.sendingTweet = false;
       }
     },
-    updateNickname: async function (tweet) {
+    openNickname: function (tweet) {
+      this.nicknameTweet = tweet;
+      this.nicknameVal = tweet.nickname || tweet.account_address;
+      this.editingNickname = true;
+    },
+    closeNickname: function () {
+      this.nicknameTweet = null;
+      this.nicknameVal = '';
+      this.editingNickname = false;
+    },
+    updateNickname: async function () {
       try {
+        const tweet = this.nicknameTweet;
         this.loading = true;
 
         await this.$store.updateNickname({
@@ -110,7 +131,7 @@ export default {
           oldNickname: tweet.nickname
         });
 
-        this.nicknameVal = '';
+        this.closeNickname();
 
         await this.$store.getFeed();
 
