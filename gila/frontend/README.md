@@ -1,29 +1,6 @@
-# Nuxt 3 Minimal Starter
+# Gila, (desert woodpecker)
 
-We recommend to look at the [documentation](https://v3.nuxtjs.org).
+This is the frontend for Gila a Tableland example app that allows posting messages and following other user's posts.  The main concept demonstrated here is the idea of each user owning there own tweets and followers data, but there is an incentive for a developer/DAO to maintains the application code and enable features like user's finding accounts to follow.  To visualize how this works see below:
 
-## Setup
+![arch diagram](/example-apps/gila/frontend/arch-diagram.png?raw=true "arch diagram")
 
-Make sure to install the dependencies
-
-```bash
-yarn install
-```
-
-## Development
-
-Start the development server on http://localhost:3000
-
-```bash
-yarn dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-yarn build
-```
-
-Checkout the [deployment documentation](https://v3.nuxtjs.org/docs/deployment).
