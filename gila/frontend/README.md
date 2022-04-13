@@ -1,6 +1,11 @@
 # Gila, (desert woodpecker)
 
-This is the frontend for Gila a Tableland example app that allows posting messages and following other user's posts.  The main concept demonstrated here is the idea of each user owning there own tweets and followers data, but there is an incentive for a developer/DAO to maintains the application code and enable features like user's finding accounts to follow.  To visualize how this works see below:
+This is the frontend for Gila a Tableland example app.  It's built with Nuxt 3 which is still very much in beta.  Because of this the static site generation isn't possible yet.  To use this app you can clone this repo and then run the server locally, once static site generation is supported Tableland will host this via IPFS and Textile Hub.
 
-![arch diagram](https://github.com/tablelandnetwork/example-apps/blob/gila/gila/frontend/arch-diagram.png?raw=true "arch diagram")
+To start locally:
 
+```
+cd gila/frontend
+npm install
+npm run dev
+```
