@@ -17,7 +17,7 @@ jobs:
           secret: ${{ secrets.BUCKET_SECRET }}
           bucket: "bafzbeiatpoubm7cc54m4zsatf566sclecteze5kn53opsaajpmsuerbuue"
           thread: "bafk42df3rz4qeb2xb4nll2xqffoulbxbs3dfqnlxoxqxp5bgnbnvftq"
-          path: "gila/frontend/.output/public"
+          path: "gila/frontend/dist"
       - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
       - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
       - run: echo "ipfs link - ${{ steps.bucket.outputs.ipfsUrl }}"

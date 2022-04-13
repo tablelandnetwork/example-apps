@@ -10,6 +10,7 @@ export default defineNuxtConfig({
   },
 
   ssr: false,
+  target: 'static',
 
   css: [
     'primevue/resources/themes/saga-blue/theme.css',
