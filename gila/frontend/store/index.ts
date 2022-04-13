@@ -1,6 +1,7 @@
 import { createPinia, defineStore, setMapStoreSuffix } from 'pinia';
 import { useRuntimeConfig } from '#nitro';
 import { connect } from '@tableland/sdk';
+import { PreparedStatement } from 'pg-promise';
 
 const config = useRuntimeConfig();
 setMapStoreSuffix('');
@@ -76,9 +77,17 @@ export const store = defineStore('$store', {
         });
 
         if (!myTweetsTable) {
+          this.alert({
+            severity: 'info',
+            content: 'Creating your Tweets table, you will have to pay gas for this. It usually takes about a minute. \nNOTE: make sure you\'re on Rinkeby!'
+          });
           myTweetsTable = await tableland.create(sqlStatements.createMyTweets(address));
         }
         if (!whoIFollowTable) {
+          this.alert({
+            severity: 'info',
+            content: 'Creating your Following table, you will have to pay gas for this. It usually takes about a minute. \nNOTE: make sure you\'re on Rinkeby!'
+          });
           whoIFollowTable = await tableland.create(sqlStatements.createWhoIFollow(address));
         }
 
@@ -90,6 +99,15 @@ export const store = defineStore('$store', {
 
         this.myTweets = parseRpcResponse(tweetsRes.data);
         this.whoIFollow = parseRpcResponse(followRes.data);
+
+        // automatically follow yourself
+        if (!this.whoIFollow.find(account => account.account_address === this.myAddress)) {
+          await this.followAccount({
+            user_address: this.myAddress,
+            tweets_tablename: this.myTweetsTable,
+            nickname: 'my account'
+          });
+        }
 
         await this.getAccount({
           tableland: tableland,
@@ -146,10 +164,9 @@ export const store = defineStore('$store', {
         host: config.validatorHost as string
       });
 
-      const myTweets = parseRpcResponse((await tableland.query(sqlStatements.getTweets(this.myTweetsTable))).data);
       const following = parseRpcResponse((await tableland.query(sqlStatements.getFollowing(this.whoIFollowTable))).data);
 
-      let othersTweets = [];
+      let tweets = [];
 
       for (let i = 0; i < following.length; i++) {
         const user = following[i];
@@ -160,21 +177,18 @@ export const store = defineStore('$store', {
         const res = await tableland.query(sqlStatements.getTweets(table));
         const twits = parseRpcResponse(res.data);
 
-        othersTweets = othersTweets.concat(twits.map(tweet => {
+        tweets = tweets.concat(twits.map(tweet => {
           return {
             ...tweet,
+            nickname: user.nickname,
+            account_address: user.account_address,
             username: username
           };
         }));
       }
 
-      this.myTweets = myTweets.map(tweet => {
-        return {
-          ...tweet,
-          username: this.myAddress
-        };
-      }).concat(othersTweets).sort((a, b) => {
-        return a.created_at > b.created_at ? 1 : -1;
+      this.myTweets = tweets.sort((a, b) => {
+        return a.created_at < b.created_at ? 1 : -1;
       });
     },
     findFollowers: async function (address) {
@@ -185,9 +199,30 @@ export const store = defineStore('$store', {
 
         const res = await tableland.query(sqlStatements.findFollowers(address, this.myAddress));
 
-        const results = parseRpcResponse(res.data).filter(account => account.user_address !== this.myAddress);
+        const results = parseRpcResponse(res.data).filter(account => {
+          return account.user_address !== this.myAddress
+        }).filter(account => {
+          return !this.whoIFollow.find(follow => follow.account_address === account.user_address);
+        });
 
         this.searchedAccounts = results;
+      } catch (err) {
+        throw err;
+      }
+    },
+    updateNickname: async function (params) {
+      try {
+        if (params.newNickname === params.oldNickname) return;
+
+        const tableland = await getConnection({
+          host: config.validatorHost as string
+        });
+
+        await tableland.query(sqlStatements.updateNickname({
+          followTable: this.whoIFollowTable,
+          nickname: params.newNickname,
+          account: params.account_address
+        }));
       } catch (err) {
         throw err;
       }
@@ -213,7 +248,7 @@ export const store = defineStore('$store', {
         const tableland = params.tableland;
         const address = params.address;
 
-        const newAccount = await requestAccount(params);
+        const newAccount = await this.requestAccount(params);
 
         if (newAccount.ok === false) throw new Error('Could not register account: ' + newAccount.statusText);
 
@@ -223,33 +258,43 @@ export const store = defineStore('$store', {
       } catch (err) {
         throw err;
       }
+    },
+    requestAccount: async function (params) {
+      const url = config.accountService;
+      if (!url) throw new Error('Account service not configured');
+
+      this.alert({
+        severity: 'info',
+        content: `Requesting to have your account added to the Gila Users Table. This costs gas but Tableland is paying!
+                  All you have to do is sign a message proving you control your wallet address.`
+      });
+
+      const message = Date.now().toString();
+      const signature = await params.tableland.signer.signMessage(message);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        referrerPolicy: 'no-referrer',
+        body: JSON.stringify({
+          message: message,
+          signature: signature,
+          address: params.address,
+          tweets: params.tweets.name,
+          follow: params.follow.name
+        })
+      });
+
+      return response.json();
     }
   }
 });
 
-
-const requestAccount = async function (params) {
-  const url = config.accountService;
-  if (!url) throw new Error('Account service not configured');
-
-  const response = await fetch(url, {
-    method: 'POST',
-    mode: 'cors',
-    cache: 'no-cache',
-    credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    referrerPolicy: 'no-referrer',
-    body: JSON.stringify({
-      address: params.address,
-      tweets: params.tweets,
-      follow: params.follow
-    })
-  });
-
-  return response.json();
-};
 
 const wait = function (ms: number) {
   return new Promise(function (resolve, reject) {
@@ -270,12 +315,13 @@ const parseRpcResponse = function (data: {rows: any[], columns: {name: string}[]
   });
 };
 
-const tablePrefixWIF = 'test1_who_i_follow_';
-const tablePrefixTweets = 'test1_tweets_';
-const allUsersTable = 'gila_all_users_670';
+const tablePrefixWIF = 'gila2_who_i_follow_';
+const tablePrefixTweets = 'gila2_tweets_';
+const allUsersTable = 'gila_all_users_680';
 
 const addrTrunc = (address) => address.slice(2,8).toLowerCase();
-const newSqlDate = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+const newSqlDate = () => Date.now();
+const escapeText = (text) => text.trim().replace(/'/g, "‘");
 
 const sqlStatements = {
   // owned by dev
@@ -292,7 +338,7 @@ const sqlStatements = {
     tweet_id INT GENERATED ALWAYS AS IDENTITY,
     in_replyto_table TEXT,
     in_replyto_id TEXT,
-    created_at DATE
+    created_at BIGINT
   );`,
   getTweets: (tableName) => `
     SELECT * FROM ${tableName}
@@ -309,7 +355,7 @@ const sqlStatements = {
       in_replyto_id,
       created_at
     ) VALUES (
-      '${params.tweet}',
+      '${escapeText(params.tweet)}',
       '${params.replyToTable || ''}',
       '${params.replyToId || ''}',
       '${newSqlDate()}'
@@ -317,6 +363,9 @@ const sqlStatements = {
   `,
   findFollowers: (address, myAddress) => `
     SELECT * FROM ${allUsersTable} WHERE user_address LIKE '${address}%';
+  `,
+  updateNickname: (params) => `
+    UPDATE ${params.followTable} SET nickname = '${escapeText(params.nickname)}' WHERE account_address = '${params.account}';
   `,
   addFollower: (params) => `
     INSERT INTO ${params.table} (
@@ -326,7 +375,7 @@ const sqlStatements = {
     ) VALUES (
       '${params.user_address}',
       '${params.tweets_tablename}',
-      '${params.nickname || ''}'
+      '${params.nickname ? escapeText(params.nickname) : ''}'
     );
   `
 };

@@ -3,8 +3,8 @@ import { Wallet, providers } from 'ethers';
 
 
 const network = {
-  network: 'staging',
-  host: 'https://staging.tableland.network'
+  network: 'testnet',
+  host: 'https://testnet.tableland.network'
 };
 
 
@@ -29,7 +29,7 @@ const addAccount = async function () {
     if (!followTable) throw new Error('must provide a follow table');
 
     const res = tableland.query(`
-      INSERT INTO gila_all_users_670 (
+      INSERT INTO gila_all_users_680 (
         user_address,
         tweets_tablename,
         followers_tablename,
@@ -61,7 +61,7 @@ const disableAccount = async function () {
     if (!account) throw new Error('must provide an account');
 
     const res = tableland.query(`
-      UPDATE gila_all_users_670
+      UPDATE gila_all_users_680
         SET account_enabled = false
         WHERE user_address = '${account}';
     `);
@@ -73,7 +73,7 @@ const disableAccount = async function () {
 
 // Only ever have to run this once.  This will create the gila user's table that
 // will serve as a reference for all of the people using gila.
-// NOTE:  This was run on Rinkeby on 4/11/2022 and the table is `gila_all_users_670`
+// NOTE:  This was run on Rinkeby on 4/12/2022 and the table is `gila_all_users_680`
 // REF: the owner of this table has nickname Account 6 -JW
 const initialize = async function () {
   try {
@@ -103,5 +103,5 @@ const initialize = async function () {
   }
 };
 
-addAccount();
-//initialize();
+initialize();
+//addAccount();
