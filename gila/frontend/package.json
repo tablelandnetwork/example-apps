@@ -10,7 +10,8 @@
     "@pinia/nuxt": "^0.1.8",
     "@tableland/sdk": "^0.0.1",
     "dotenv": "^16.0.0",
-    "nuxt3": "latest",
+    "ethers": "^5.6.4",
+    "nuxt": "npm:nuxt3@latest",
     "pinia": "^2.0.13",
     "primeicons": "^5.0.0",
     "primevue": "^3.12.4"

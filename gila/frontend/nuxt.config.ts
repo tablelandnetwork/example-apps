@@ -1,12 +1,15 @@
 import 'dotenv/config';
-import { defineNuxtConfig } from 'nuxt3'
+import { defineNuxtConfig } from 'nuxt'
 
 // https://v3.nuxtjs.org/docs/directory-structure/nuxt.config
 export default defineNuxtConfig({
-  publicRuntimeConfig: {
-    validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network',
-    validatorNet: process.env.NETWORK || 'testnet',
-    accountService: process.env.SERVICE || 'localhost:1337'
+  runtimeConfig: {
+    public: {
+      validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network',
+      validatorNet: process.env.NETWORK || 'testnet',
+      accountService: process.env.SERVICE || 'localhost:1337',
+      alchemyApiKey: process.env.ALCHEMY || ''
+    }
   },
 
   ssr: false,

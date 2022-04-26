@@ -1,9 +1,8 @@
+import { ethers } from 'ethers';
 import { createPinia, defineStore, setMapStoreSuffix } from 'pinia';
-import { useRuntimeConfig } from '#nitro';
 import { connect } from '@tableland/sdk';
 import { PreparedStatement } from 'pg-promise';
 
-const config = useRuntimeConfig();
 setMapStoreSuffix('');
 
 
@@ -17,16 +16,36 @@ const getConnection = function () {
     if (connection) return connection;
 
     connection = await connect({
-      host: config.validatorHost as string
+      host: options.host as string
     });
 
     return connection;
   };
 }();
 
+// store the tableland connection as a private plain Object
+const getProvider = function () {
+  let provider: any;
+  return function (options?: any) {
+    if (provider) return provider;
+
+    provider = new ethers.providers.AlchemyProvider('rinkeby', options.apiKey);
+
+    return provider;
+  };
+}();
+
 export const store = defineStore('$store', {
   state: () => {
+    const config = useRuntimeConfig();
+
     return {
+      config: {
+        validatorHost: config.public.validatorHost,
+        validatorNet: config.public.validatorNet,
+        accountService: config.public.accountService,
+        alchemyApiKey: config.public.alchemyApiKey
+      },
       messages: [],
       connected: false,
       noAccount: false,
@@ -55,9 +74,9 @@ export const store = defineStore('$store', {
     connect: async function () {
       try {
         // connect to tableland
-        console.log(`connecting to validator at: ${config.validatorHost}`);
+        console.log(`connecting to validator at: ${this.config.validatorHost}`);
         const tableland = await getConnection({
-          host: config.validatorHost as string
+          host: this.config.validatorHost as string
         });
 
         // NOTE: there's a subtlety here.  By calling `list` we are only considering tables the user owns
@@ -145,7 +164,7 @@ export const store = defineStore('$store', {
     tweet: async function (chirp) {
       try {
         const tableland = await getConnection({
-          host: config.validatorHost as string
+          host: this.config.validatorHost as string
         });
 
         await tableland.query(sqlStatements.writeTweet({
@@ -161,18 +180,23 @@ export const store = defineStore('$store', {
     },
     getFeed: async function () {
       const tableland = await getConnection({
-        host: config.validatorHost as string
+        host: this.config.validatorHost as string
       });
 
       const following = parseRpcResponse((await tableland.query(sqlStatements.getFollowing(this.whoIFollowTable))).data);
 
       let tweets = [];
 
+      const provider = getProvider(this.config.alchemyApiKey);
       for (let i = 0; i < following.length; i++) {
         const user = following[i];
 
         const table = user.tweets_tablename;
-        const username = user.nickname || user.account_address;
+        const ens = await provider.lookupAddress(user.account_address);
+
+        const account = ens || user.account_address;
+
+        const username = user.nickname ? `${user.nickname} (${account})` : account;
 
         const res = await tableland.query(sqlStatements.getTweets(table));
         const twits = parseRpcResponse(res.data);
@@ -194,7 +218,7 @@ export const store = defineStore('$store', {
     findFollowers: async function (address) {
       try {
         const tableland = await getConnection({
-          host: config.validatorHost as string
+          host: this.config.validatorHost as string
         });
 
         const res = await tableland.query(sqlStatements.findFollowers(address, this.myAddress));
@@ -215,7 +239,7 @@ export const store = defineStore('$store', {
         if (params.newNickname === params.oldNickname) return;
 
         const tableland = await getConnection({
-          host: config.validatorHost as string
+          host: this.config.validatorHost as string
         });
 
         await tableland.query(sqlStatements.updateNickname({
@@ -230,7 +254,7 @@ export const store = defineStore('$store', {
     followAccount: async function (account) {
       try {
         const tableland = await getConnection({
-          host: config.validatorHost as string
+          host: this.config.validatorHost as string
         });
 
         await tableland.query(sqlStatements.addFollower({...account, table: this.whoIFollowTable}));
@@ -260,7 +284,7 @@ export const store = defineStore('$store', {
       }
     },
     requestAccount: async function (params) {
-      const url = config.accountService;
+      const url = this.config.accountService;
       if (!url) throw new Error('Account service not configured');
 
       this.alert({
