@@ -2,6 +2,8 @@ import { ethers } from 'ethers';
 import { createPinia, defineStore, setMapStoreSuffix } from 'pinia';
 import { connect } from '@tableland/sdk';
 import { PreparedStatement } from 'pg-promise';
+import { useRuntimeConfig } from '#imports';
+
 
 setMapStoreSuffix('');
 
@@ -37,6 +39,7 @@ const getProvider = function () {
 
 export const store = defineStore('$store', {
   state: () => {
+    // have to wait until nuxt is finished setting itself up
     const config = useRuntimeConfig();
 
     return {
