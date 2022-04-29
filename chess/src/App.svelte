@@ -192,7 +192,44 @@
     ]
   ];
 
+  const rowMap = {
+    0: '8',
+    1: '7',
+    2: '6',
+    3: '5',
+    4: '4',
+    5: '3',
+    6: '2',
+    7: '1'
+  };
+
+  const colMap = {
+    0: 'a',
+    1: 'b',
+    2: 'c',
+    3: 'd',
+    4: 'e',
+    5: 'f',
+    6: 'g',
+    7: 'h'
+  };
+
+  const pieceMap = {
+    king: 'K',
+    queen: 'Q',
+    bishop: 'B',
+    knight: 'N',
+    rook: 'R',
+    pawn: ''
+  };
+
+  let gameHistory = [];
+
   let turn = 'white';
+  let whiteCanCastleLong = true;
+  let whiteCanCastleShort = true;
+  let blackCanCastleLong = true;
+  let blackCanCastleShort = true;
 
   function pickupPiece(eve) {
     eve.dataTransfer.setData('piece', eve.target?.dataset.piece);
@@ -225,14 +262,85 @@
 
     if (!validMove) return;
 
+    // TODO: Did they win?
+    //if (isCheckmate()) ...
+
+    doMove(piece, moveFrom, moveTo);
+
     turn = turn === 'black' ? 'white' : 'black';
+  }
 
-    // Did they win?
+  function doMove(piece, from, to) {
 
-    console.log(`Moving ${piece} from ${moveFrom} to ${moveTo}`);
+    console.log(`Moving ${piece} from ${from} to ${to}`);
 
-    pieceSpace[moveTo[0]][moveTo[1]] = pieceSpace[moveFrom[0]][moveFrom[1]];
-    pieceSpace[moveFrom[0]][moveFrom[1]] = '';
+    if (isEnPassant(from, to)) {
+      const color = getPieceColor(piece);
+      if (color === 'black') pieceSpace[to[0] - 1][to[1]] = '';
+      if (color === 'white') pieceSpace[to[0] + 1][to[1]] = '';
+    }
+
+    gameHistory = gameHistory.concat([{
+      from: from,
+      to: to,
+      piece: piece,
+      notation: getMoveNotation(from, to)
+    }]);
+
+    pieceSpace[to[0]][to[1]] = pieceSpace[from[0]][from[1]];
+    pieceSpace[from[0]][from[1]] = '';
+
+    const pieceName = getPieceName(piece)
+    if (isCastle(pieceName, from, to)) {
+      // also move the second piece in the castling
+
+      // player moved left rook
+      if (from[1] === 0) {
+        pieceSpace[from[0]][2] = pieceSpace[from[0]][4];
+        pieceSpace[from[0]][4] = '';
+      }
+
+      // player moved king to the left
+      if (from[1] === 4 && to[1] === 2) {
+        pieceSpace[from[0]][3] = pieceSpace[from[0]][0];
+        pieceSpace[from[0]][0] = '';
+      }
+      // player moved king to the right
+      if (from[1] === 4 && to[1] === 6) {
+        pieceSpace[from[0]][5] = pieceSpace[from[0]][7];
+        pieceSpace[from[0]][7] = '';
+      }
+
+      // player moved right rook
+      if (from[1] === 7) {
+        pieceSpace[from[0]][6] = pieceSpace[from[0]][4];
+        pieceSpace[from[0]][4] = '';
+      }
+    }
+
+    const color = getPieceColor(piece);
+
+    // track if castling is still valid
+    if (pieceName === 'rook') {
+      const rookNumber = piece.match('1') ? 1 : 2;
+      if (color === 'white' && rookNumber === 1) {
+        whiteCanCastleLong = false;
+      } else if (color === 'white' && rookNumber === 2) {
+        whiteCanCastleShort = false;
+      } else if (color === 'black' && rookNumber === 1) {
+        blackCanCastleLong = false;
+      } else if (color === 'black' && rookNumber === 2) {
+        blackCanCastleShort = false;
+      }
+    } else if (pieceName === 'king') {
+      if (color === 'white') {
+        whiteCanCastleLong = false;
+        whiteCanCastleShort = false;
+      } else if (color === 'black') {
+        blackCanCastleLong = false;
+        blackCanCastleShort = false;
+      }
+    }
   }
 
   // are they allowed to make the move
@@ -264,6 +372,17 @@
     return '';
   }
 
+  function getMoveNotation(from, to) {
+    const fromSquare = rowMap[from[0]] + colMap[from[1]];
+    const toSquare = rowMap[to[0]] + colMap[to[1]];
+
+    // Move hasn't happened yet
+    const piece = pieceMap[getPieceName(pieceSpace[from[0]][from[1]])];
+    const capture = !!pieceSpace[to[0]][to[1]] || isEnPassant(from, to);
+
+    return `${piece}${fromSquare}${capture ? 'x' : '-'}${toSquare}`;
+  }
+
   function isValidPhysics(pieceText, from, to) {
     const name = getPieceName(pieceText);
     const color = getPieceColor(pieceText);
@@ -276,7 +395,11 @@
     // piece must be moving
     if (from[0] === to[0] && from[1] === to[1]) return false;
 
+    if (isCastle(name, from, to)) return canCastle(pieceText, from, to);
+
     if (name == 'pawn') {
+      // check for en passant
+      if (isEnPassant(from, to)) return true;
       // ensure it is moving forward one square, or 2 if first move
       if (color === 'white' && from[0] === 6 && from[0] - to[0] !== 1 && from[0] - to[0] !== 2) return false;
       if (color === 'white' && from[0] !== 6 && from[0] - to[0] !== 1) return false;
@@ -336,7 +459,7 @@
       return true;
     }
     if (name == 'king') {
-      // ensure the move is only one square
+      // ensure the move is only one square, NOTE: we already checked if this is a castling
       if (Math.abs(from[1] - to[1]) > 1 || Math.abs(from[0] - to[0]) > 1) return false;
       return true;
     }
@@ -389,31 +512,111 @@
     return false;
   }
 
+  // TODO: need a way to indicate if either color is in check
+
+  // TODO: need a way to deal with pawns making it to the back line
+
+  function isCastle(pieceName, from, to) {
+    if (pieceName !== 'rook' && pieceName !== 'king') return false;
+
+    if (pieceName === 'rook') {
+      if (from[0] === 7 && from[1] === 0 && to[0] === 7 && to[1] === 3) return true;
+      if (from[0] === 7 && from[1] === 7 && to[0] === 7 && to[1] === 5) return true;
+      if (from[0] === 0 && from[1] === 0 && to[0] === 0 && to[1] === 3) return true;
+      if (from[0] === 0 && from[1] === 7 && to[0] === 0 && to[1] === 5) return true;
+    }
+    if (pieceName === 'king') {
+      if (from[0] === 0 && from[1] === 4 && ((to[0] === 0 && to[1] === 2) || (to[0] === 0 && to[1] === 6))) return true;
+      if (from[0] === 7 && from[1] === 4 && ((to[0] === 7 && to[1] === 2) || (to[0] === 7 && to[1] === 6))) return true;
+    }
+  }
+  function canCastle(pieceText, from, to) {
+    // TODO: Need to ensure they are not castling through check
+    const pieceName = getPieceName(pieceText)
+    const color = getPieceColor(pieceText);
+
+    if (!pathClear(from, to)) return false;
+
+    // basic approach of just checking every possible castle move and if it's still allowed
+    if (pieceName === 'rook') {
+      const rookNumber = pieceText.match('1') ? 1 : 2;
+      if (color === 'white' && rookNumber === 1 && whiteCanCastleLong) return true;
+      if (color === 'white' && rookNumber === 2 && whiteCanCastleShort) return true;
+      if (color === 'black' && rookNumber === 1 && blackCanCastleLong) return true;
+      if (color === 'black' && rookNumber === 2 && blackCanCastleShort) return true;
+    }
+    if (pieceName === 'king') {
+      const big = to[1] === 2;
+      if (color === 'white' && big && whiteCanCastleLong) return true;
+      if (color === 'white' && !big && whiteCanCastleShort) return true;
+
+      if (color === 'black' && big && blackCanCastleLong) return true;
+      if (color === 'black' && !big && blackCanCastleShort) return true;
+    }
+
+    return false;
+  }
+
+  // this will indicate if the (from, to) move is allowed because of en passant
+  function isEnPassant(from, to) {
+    if (getPieceName(pieceSpace[from[0]][from[1]]) !== 'pawn') return false;
+    // look through history and decide
+    const lastMove = gameHistory[gameHistory.length - 1];
+    if (!lastMove) return false;
+
+    if (getPieceName(lastMove.piece) !== 'pawn') return false;
+    const pawnColor = getPieceColor(lastMove.piece);
+
+    // make sure the last move was a 2 square move
+    if (pawnColor === 'white' && lastMove.to[0] !== 4) return false;
+    if (pawnColor === 'white' && lastMove.from[0] !== 6) return false;
+    if (pawnColor === 'black' && lastMove.to[0] !== 3) return false;
+    if (pawnColor === 'black' && lastMove.from[0] !== 1) return false;
+
+    // make sure that the proposed move puts the pawn 1 square behind the last move
+    if (lastMove.to[1] !== to[1]) return false;
+    if (pawnColor === 'white' && lastMove.to[0] - to[0] !== -1) return false;
+    if (pawnColor === 'black' && lastMove.to[0] - to[0] !== 1) return false;
+
+    return true;
+  }
+
 </script>
 
 <main>
   <div class="head-info">
-    <h3>Current Turn: {turn}</h3>
+    <h1>Tableland Chess</h1>
   </div>
-  <div class="chessboard">
+  <div class="flex-container">
+    <div class="chessboard">
 
-    {#each pieceSpace as row, rowIndex}
-    {#each row as square, squareIndex}
+      {#each pieceSpace as row, rowIndex}
+      {#each row as square, squareIndex}
 
-      <div
-        class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'white' : 'black'}"
-        on:dragover="{dragOver}"
-        on:drop="{dropPiece}"
-        on:dragstart="{pickupPiece}"
-        on:dragend="{putdownPiece}"
-        data-location="{rowIndex},{squareIndex}"
-      >
-        {@html pieceSpace[rowIndex][squareIndex] }
-      </div>
+        <div
+          class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
+          on:dragover="{dragOver}"
+          on:drop="{dropPiece}"
+          on:dragstart="{pickupPiece}"
+          on:dragend="{putdownPiece}"
+          data-location="{rowIndex},{squareIndex}"
+        >
+          {@html pieceSpace[rowIndex][squareIndex] }
+        </div>
 
-    {/each}
-    {/each}
+      {/each}
+      {/each}
 
+    </div>
+    <div class="history">
+      <h3>Current Turn: {turn}</h3>
+      <h3>Moves</h3>
+      <ol>
+      {#each gameHistory as move}
+        <li>{move.notation}</li>
+      {/each}
+      </ol>
+    </div>
   </div>
 </main>
 
@@ -423,11 +626,20 @@
   text-align: center;
 }
 
+.flex-container {
+  display: flex;
+}
+
 .chessboard {
   width: 640px;
   height: 640px;
-  margin: auto;
+  margin: 0 1rem;
   border: 25px solid #333;
+}
+
+.history {
+  margin: 0 auto;
+  text-align: center;
 }
 
 .black {
