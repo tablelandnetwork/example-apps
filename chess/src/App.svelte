@@ -246,7 +246,9 @@
 
     // en passant is the only move in chess where the captured piece is not
     // on the square the capturing piece is moving to
-    if (this.isEnPassant(from, to)) {
+
+    const enPassant = this.isEnPassant(from, to);
+    if (enPassant) {
       if (color === 'black') this.pieceSpace[to[0] - 1][to[1]] = '';
       if (color === 'white') this.pieceSpace[to[0] + 1][to[1]] = '';
     }
@@ -255,7 +257,9 @@
       from: from,
       to: to,
       piece: piece,
-      notation: this.getMoveNotation(from, to)
+      notation: this.getMoveNotation(from, to),
+      capture: this.getCapturedPiece(from, to),
+      enPassant: enPassant
     });
 
     // do the actual move
@@ -264,12 +268,6 @@
 
     // if castling also move the second piece in the castling
     if (this.isCastle(pieceName, from, to)) {
-      // player moved left rook
-      if (from[1] === 0) {
-        this.pieceSpace[from[0]][2] = this.pieceSpace[from[0]][4];
-        this.pieceSpace[from[0]][4] = '';
-      }
-
       // player moved king to the left
       if (from[1] === 4 && to[1] === 2) {
         this.pieceSpace[from[0]][3] = this.pieceSpace[from[0]][0];
@@ -279,12 +277,6 @@
       if (from[1] === 4 && to[1] === 6) {
         this.pieceSpace[from[0]][5] = this.pieceSpace[from[0]][7];
         this.pieceSpace[from[0]][7] = '';
-      }
-
-      // player moved right rook
-      if (from[1] === 7) {
-        this.pieceSpace[from[0]][6] = this.pieceSpace[from[0]][4];
-        this.pieceSpace[from[0]][4] = '';
       }
     }
 
@@ -311,16 +303,35 @@
     }
 
     // See if this move put the other player in check
-    const opponentColor = color === 'white' ? 'black' : 'white';
-    const opponentKing = this.getKingLocation(opponentColor);
-    if (this.inCheck(opponentColor, opponentKing)) {
+    const opponentColor = this.getOpponentColor(color);
+    if (this.inCheck(opponentColor)) {
       this.palyerInCheck = true;
     } else {
       this.palyerInCheck = false;
     }
 
-    this.turn = this.turn === 'black' ? 'white' : 'black';
+    this.turn = this.getOpponentColor(this.turn);
   };
+
+  // undo the last move. useful for testing future state of a board
+  Board.prototype.undoMove = function (piece, from, to) {
+    const lastMove = this.history[this.history.length - 1];
+    // TODO: this won't undo a castle ATM, but we are only using this to test checkmate so thats fine
+    this.doMove(lastMove.piece, lastMove.to, lastMove.from);
+
+    // undo catpures
+    if (lastMove.capture) {
+      const capturedPiece = lastMove.capture;
+      const captureLoc = lastMove.enPassant ? [lastMove.from[0], lastMove.to[1]] : [lastMove.to[0], lastMove.to[1]];
+
+      this.pieceSpace[captureLoc[0]][captureLoc[1]] = capturedPiece;
+    }
+
+    this.turn = this.getPieceColor(lastMove.piece);
+    // remove the "undo" and the move from history
+    this.history.pop();
+    this.history.pop();
+  }
 
   // this will indicate if the (from, to) move is allowed because of en passant
   Board.prototype.isEnPassant = function (from, to) {
@@ -357,18 +368,26 @@
     return `${piece}${fromSquare}${capture ? 'x' : '-'}${toSquare}`;
   };
 
-  Board.prototype.isCastle = function (pieceName, from, to) {
-    if (pieceName !== 'rook' && pieceName !== 'king') return false;
+  // this gets the piece that would be captured if from->to move happend
+  Board.prototype.getCapturedPiece = function (from, to) {
+    if (!from) return;
+    const enPassant = this.isEnPassant(from, to);
 
-    if (pieceName === 'rook') {
-      if (from[0] === 7 && from[1] === 0 && to[0] === 7 && to[1] === 3) return true;
-      if (from[0] === 7 && from[1] === 7 && to[0] === 7 && to[1] === 5) return true;
-      if (from[0] === 0 && from[1] === 0 && to[0] === 0 && to[1] === 3) return true;
-      if (from[0] === 0 && from[1] === 7 && to[0] === 0 && to[1] === 5) return true;
+    // if it is en passant, the piece on the "from" row and "to" column is being captured
+    if (enPassant) return this.pieceSpace[from[0]][to[1]];
+
+    // this will be a piece string, or an empty string
+    return this.pieceSpace[to[0]][to[1]];
+  };
+
+  Board.prototype.isCastle = function (pieceName, from, to) {
+    if (pieceName !== 'king') return false;
+
+    if (from[0] === 0 && from[1] === 4 && ((to[0] === 0 && to[1] === 2) || (to[0] === 0 && to[1] === 6))) {
+      return true;
     }
-    if (pieceName === 'king') {
-      if (from[0] === 0 && from[1] === 4 && ((to[0] === 0 && to[1] === 2) || (to[0] === 0 && to[1] === 6))) return true;
-      if (from[0] === 7 && from[1] === 4 && ((to[0] === 7 && to[1] === 2) || (to[0] === 7 && to[1] === 6))) return true;
+    if (from[0] === 7 && from[1] === 4 && ((to[0] === 7 && to[1] === 2) || (to[0] === 7 && to[1] === 6))) {
+      return true;
     }
   };
 
@@ -406,6 +425,10 @@
     if (text.match('black')) return 'black';
 
     return '';
+  };
+
+  Board.prototype.getOpponentColor = function (piece) {
+    return this.getPieceColor(piece) === 'white' ? 'black' : 'white';
   };
 
   Board.prototype.isValidPhysics = function (pieceText, from, to) {
@@ -537,26 +560,6 @@
     return false;
   }
 
-  // return true/false if the "color" would be in check if it's king was at "location"
-  Board.prototype.inCheck = function (color, location) {
-    if (!color) throw new Error('inCheck must be passed a color');
-
-    for (let i = 0; i < this.pieceSpace.length; i++) {
-      const row = this.pieceSpace[i];
-      for (let j = 0; j < row.length; j++) {
-        const square = row[j];
-
-        if (!square || this.getPieceColor(square) === color) continue;
-
-        if (this.isValidPhysics(square, [i, j], location)) return true;
-      }
-    }
-
-    return false;
-  }
-
-  // TODO: need a way to deal with pawns making it to the back line
-
   // return true/false if this from->to is allowed to castle
   Board.prototype.canCastle = function (pieceText, from, to) {
     if (this.palyerInCheck) return false;
@@ -597,11 +600,33 @@
     return false;
   };
 
+  // Go through every one of the opponents pieces and see if they can move to the location of the king
+  // optionally pass in a location of the king, or just use the current location
+  Board.prototype.inCheck = function (color, kingLocation = this.getKingLocation(color)) {
+    if (color !== 'black' && color !== 'white') throw new Error('inCheck must be passed a color');
+
+    for (let i = 0; i < this.pieceSpace.length; i++) {
+      const row = this.pieceSpace[i];
+      for (let j = 0; j < row.length; j++) {
+        const square = row[j];
+
+        if (!square || this.getPieceColor(square) === color) continue;
+
+        if (this.isValidPhysics(square, [i, j], kingLocation)) return true;
+      }
+    }
+
+    return false;
+  }
+
+  // TODO: need a way to deal with pawns making it to the back line
+
 </script>
 
 <script lang="ts">
   const gameBoard = new Board();
 
+  let winner;
   let pieceSpace = gameBoard.pieceSpace
   let history = gameBoard.history;
   let turn = gameBoard.turn;
@@ -628,6 +653,7 @@
 
   function dropPiece(eve) {
     eve.preventDefault();
+    if (winner) return;
     const moveTo = eve.currentTarget.dataset.location.split(',').map(str => parseInt(str, 10));
     const moveFrom = eve.dataTransfer.getData('location').split(',').map(str => parseInt(str, 10));
     const piece = eve.dataTransfer.getData('piece');
@@ -641,16 +667,52 @@
 
     if (!validMove) return;
 
-    // TODO: Did they win?
-    //if (isCheckmate()) ...
-
-    // TODO: this will be await doMove(...) and it should result in a call to tableland
+    // TODO: call to tableland with new board state
     gameBoard.doMove(piece, moveFrom, moveTo);
 
     // Svelte reactivity implementation means that we need to
     // trigger the changes to the variable assignments directly
     // More detail can be found here: https://svelte.dev/docs#component-format-script-2-assignments-are-reactive
     trigger();
+
+    // Did they win?
+    const opponentColor = gameBoard.getOpponentColor(piece);
+    if (!gameBoard.inCheck(opponentColor)) return;
+
+    // go through every square with a piece from a given color and see if there is any move that is allowed
+    // If the move is allowed, that means the "color" is no longer in check, hence it's not checkmate
+    const ghostBoard = getGhostBoard();
+
+    for (let i = 0; i < ghostBoard.pieceSpace.length; i++) {
+      const row = ghostBoard.pieceSpace[i];
+      for (let j = 0; j < row.length; j++) {
+        const square = row[j];
+
+        if (!square || ghostBoard.getPieceColor(square) !== opponentColor) continue;
+
+        for (let k = 0; k < ghostBoard.pieceSpace.length; k++) {
+          const row2 = ghostBoard.pieceSpace[k];
+          for (let l = 0; l < row2.length; l++) {
+            const square2 = row2[j];
+
+            if (!ghostBoard.isValidPhysics(square, [i, j], [k, l])) continue;
+            ghostBoard.doMove(square, [i, j], [k, l]);
+
+            // if any move results in not being in check they are not in checkmate
+            if (!ghostBoard.inCheck(opponentColor)) {
+              console.log('Not checkmate');
+              console.log(ghostBoard.inCheck(opponentColor));
+              console.log(JSON.stringify(ghostBoard, null, 4))
+              return;
+            }
+
+            ghostBoard.undoMove();
+          }
+        }
+      }
+    }
+
+    winner = ghostBoard.getPieceColor(piece);
   }
 
   function trigger() {
@@ -680,8 +742,7 @@
     // get a "ghostBoard" so we can make the move and see if the king is in check
     const ghostBoard = getGhostBoard();
     ghostBoard.doMove(pieceText, from, to);
-    const myKing = ghostBoard.getKingLocation(color);
-    if (ghostBoard.inCheck(color, myKing)) return false;
+    if (ghostBoard.inCheck(color)) return false;
 
     return true;
   }
@@ -735,12 +796,21 @@
 
     </div>
     <div class="history">
+      {#if !winner}
       <h3>
         Current Turn: {turn}
         {#if palyerInCheck}
         <span class="text-red">In Check!</span>
         {/if}
       </h3>
+      {/if}
+
+      {#if winner}
+      <h3>
+        Game Over
+        <span class="text-red">{winner} is the Winner!</span>
+      </h3>
+      {/if}
       <h3>Moves</h3>
 
       <div class="flex-container">
