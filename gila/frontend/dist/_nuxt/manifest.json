@@ -1,10 +1,10 @@
 {
-  "node_modules/nuxt3/dist/app/entry.mjs": {
-    "file": "entry-3cd8d72e.mjs",
-    "src": "node_modules/nuxt3/dist/app/entry.mjs",
+  "node_modules/nuxt/dist/app/entry.mjs": {
+    "file": "entry-895c5627.mjs",
+    "src": "node_modules/nuxt/dist/app/entry.mjs",
     "isEntry": true,
     "css": [
-      "entry.43562b57.css"
+      "entry.734d06b0.css"
     ],
     "assets": [
       "gila.d75547c5.jpg",
