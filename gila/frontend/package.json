@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "nuxi dev",
-    "generate": "nuxi generate && cp -R .output/public/ dist/",
+    "generate": "nuxi generate && cp -R .output/public/ dist/ && cp dist/index.html dist/index-copy.html && sed 's/ type=\"module\"//' dist/index-copy.html > dist/index.html && rm dist/index-copy.html",
     "start": "node .output/server/index.mjs"
   },
   "devDependencies": {
