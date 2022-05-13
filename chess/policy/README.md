@@ -1,15 +1,12 @@
-# Basic Sample Hardhat Project
+# Chess Access Control Policy
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
-
-Try running some of the following tasks:
+This is the access control policy that dictates who the table used in the Chess game can be updated
 
 ```shell
-npx hardhat accounts
+# compile the contract
 npx hardhat compile
-npx hardhat clean
+# test the contract
 npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
+# deploy the contract
+node --network rinkeby scripts/deploy.js
 ```
