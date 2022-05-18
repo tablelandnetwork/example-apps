@@ -9,17 +9,25 @@ struct Policy {
     bool allowUpdate;
     bool allowDelete;
 
+    string withCheck;
     string whereClause;
+
+    string[] updatableColumns;
 }
 
 contract Chess {
 
     function getPolicy(address caller) public pure returns(Policy memory) {
+        string[] memory cols;
         return Policy(
             true,
             false,
             false,
-            string.concat('player_address = ', addressToString(caller))
+
+            string.concat('player_address = ', addressToString(caller)),
+            '',
+
+            cols
         );
     }
 
