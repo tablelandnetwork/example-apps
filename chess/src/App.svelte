@@ -624,7 +624,19 @@
 </script>
 
 <script lang="ts">
+  import { Alert } from '@specialdoom/proi-ui';
+  // The store is custom which means svelte will inject all exports as a variable with a `$` prefix
+  import {
+    alerts,
+    connected,
+    init
+  } from './store';
+
   const gameBoard = new Board();
+
+  const connect = async function () {
+    await init();
+  };
 
   let winner;
   let pieceSpace = gameBoard.pieceSpace
@@ -770,10 +782,23 @@
 
 </script>
 
-<main>
-  <div class="head-info">
-    <h1>Tableland Chess</h1>
+<main class="relative">
+  <div class="fixed left-4 right-4">
+    {#each $alerts as alert}
+    <div on:click="{alerts.clearAlert(alert)}" class="cursor-pointer">
+      <Alert type="{alert.type}">{alert.message}</Alert>
+    </div>
+    {/each}
   </div>
+  <div class="head-info">
+    <h1 class="mt-8 text-3xl font-mono font-semibold">Tableland Chess</h1>
+  </div>
+  {#if !$connected}
+  <div class="container-center">
+    <button type="button" class="btn btn-connect cursor-pointer" on:click="{connect}">Connect To Tableland</button>
+  </div>
+  {/if}
+  {#if $connected}
   <div class="flex-container">
     <div class="chessboard">
 
@@ -845,9 +870,37 @@
 
     </div>
   </div>
+  {/if}
 </main>
 
 <style>
+
+.btn.btn-connect {
+  border: 0;
+  line-height: 2.5;
+  padding: 0 20px;
+  font-size: 1rem;
+  text-align: center;
+  color: #fff;
+  text-shadow: 1px 1px 1px #000;
+  border-radius: 10px;
+  background-color: rgba(227, 227, 227, 1);
+  background-image: linear-gradient(to top left,
+                                    rgba(0, 0, 0, .2),
+                                    rgba(0, 0, 0, .2) 30%,
+                                    rgba(0, 0, 0, 0));
+  box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+              inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+
+.btn.btn-connect:hover {
+  background-color: rgba(137, 137, 137, 1);
+}
+
+.btn.btn-connect:active {
+  box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+              inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
 
 .head-info {
   text-align: center;
@@ -856,6 +909,11 @@
 .flex-container {
   display: flex;
   align-items: flex-start;
+}
+
+.container-center {
+  padding: 2rem;
+  text-align: center;
 }
 
 .chessboard {
