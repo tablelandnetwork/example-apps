@@ -2,24 +2,14 @@
 pragma solidity ^0.8.13;
 
 import "hardhat/console.sol";
+import "./Controller.sol";
 
 
-struct Policy {
-    bool allowInsert;
-    bool allowUpdate;
-    bool allowDelete;
+contract Chess is TablelandController {
 
-    string withCheck;
-    string whereClause;
-
-    string[] updatableColumns;
-}
-
-contract Chess {
-
-    function getPolicy(address caller) public pure returns(Policy memory) {
+    function getPolicy(address caller) public pure override returns(TablelandControllerLibrary.Policy memory) {
         string[] memory cols;
-        return Policy(
+        TablelandControllerLibrary.Policy memory policy = TablelandControllerLibrary.Policy(
             true,
             false,
             false,
@@ -29,6 +19,8 @@ contract Chess {
 
             cols
         );
+
+        return policy;
     }
 
     function addressToString(address x) internal pure returns (string memory) {
