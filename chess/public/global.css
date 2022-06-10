@@ -424,6 +424,9 @@ Ensure the default browser behavior of the `hidden` attribute.
   --tw-backdrop-saturate:  ;
   --tw-backdrop-sepia:  ;
 }
+.visible {
+  visibility: visible;
+}
 .fixed {
   position: fixed;
 }
@@ -436,29 +439,113 @@ Ensure the default browser behavior of the `hidden` attribute.
 .right-4 {
   right: 1rem;
 }
+.col-span-5 {
+  grid-column: span 5 / span 5;
+}
+.col-span-4 {
+  grid-column: span 4 / span 4;
+}
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
+.float-right {
+  float: right;
+}
+.m-8 {
+  margin: 2rem;
+}
 .mt-8 {
   margin-top: 2rem;
+}
+.mr-4 {
+  margin-right: 1rem;
+}
+.block {
+  display: block;
+}
+.flex {
+  display: flex;
 }
 .table {
   display: table;
 }
+.grid {
+  display: grid;
+}
+.w-48 {
+  width: 12rem;
+}
+.w-96 {
+  width: 24rem;
+}
+.w-5\/6 {
+  width: 83.333333%;
+}
+.w-1\/6 {
+  width: 16.666667%;
+}
+.max-w-sm {
+  max-width: 24rem;
+}
 .cursor-pointer {
   cursor: pointer;
+}
+.grid-cols-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.items-start {
+  align-items: flex-start;
+}
+.gap-4 {
+  gap: 1rem;
+}
+.overflow-hidden {
+  overflow: hidden;
+}
+.text-ellipsis {
+  text-overflow: ellipsis;
 }
 .border {
   border-width: 1px;
 }
+.pl-8 {
+  padding-left: 2rem;
+}
+.pl-4 {
+  padding-left: 1rem;
+}
+.text-center {
+  text-align: center;
+}
 .font-mono {
   font-family: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.font-bold {
+  font-family: Prompt, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 .text-3xl {
   font-size: 1.875rem;
   line-height: 2.25rem;
 }
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
 .font-semibold {
   font-weight: 600;
 }
+.font-bold {
+  font-weight: 700;
+}
+.text-blue-300 {
+  --tw-text-opacity: 1;
+  color: rgb(147 197 253 / var(--tw-text-opacity));
+}
 .filter {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+.hover\:underline:hover {
+  -webkit-text-decoration-line: underline;
+          text-decoration-line: underline;
 }
 

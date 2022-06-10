@@ -240,7 +240,7 @@
     const color = this.getPieceColor(piece);
     const pieceName = this.getPieceName(piece);
 
-    //console.log(`Moving ${piece} from ${from} to ${to}`);
+    console.log(`Moving ${piece} from ${from} to ${to}`);
 
     // NOTE: it's important that we do these steps in the correct order
 
@@ -624,19 +624,106 @@
 </script>
 
 <script lang="ts">
-  import { Alert } from '@specialdoom/proi-ui';
+  import { tick, onMount } from 'svelte';
+  import { utils } from 'ethers';
+  import {
+    Alert,
+    Button,
+    Icon,
+    Input,
+    Modal,
+    ModalBody,
+    ModalActions,
+    Radio
+  } from '@specialdoom/proi-ui';
   // The store is custom which means svelte will inject all exports as a variable with a `$` prefix
   import {
     alerts,
+    audience,
     connected,
-    init
+    gameId,
+    games,
+    init,
+    moves,
+    myAddress,
+    myColor
   } from './store';
+
+  onMount(function () {
+    const token = localStorage.getItem('tableland.token');
+    if (token) connect();
+  });
 
   const gameBoard = new Board();
 
   const connect = async function () {
-    await init();
+    // do lookup here so that this function can be an event listener and called directly without worrying about arity
+    const token = localStorage.getItem('tableland.token');
+
+    moves.subscribe(async mvs => {
+      for (let i = Number(gameBoard.history.length); i < mvs.length; i++) {
+        const moveStr = mvs[i];
+        const parts = moveStr.split(':');
+        const piece = parts[0];
+        const from = parts[1].split(',');
+        const to = parts[2].split(',');
+
+        if (!(piece && from && to)) {
+          alerts.addAlert(
+            'Looks like the game state is invalid. We can\'t let you finish this game, but you can start a new one.',
+            'error'
+          );
+        }
+
+        updateBoard(piece, from, to);
+        await tick();
+      }
+    });
+
+    await init(token);
+    await games.findGames();
   };
+
+  const logout = function () {
+    localStorage.setItem('tableland.token', '');
+    location.reload();
+  };
+
+  let newOpponentAddress = '';
+  let newGameId = '';
+  $: validChallenge = function () {
+    try {
+      // make sure the wallet address is valid
+      newOpponentAddress = utils.getAddress(newOpponentAddress)
+    } catch (err) {
+      return false;
+    }
+
+    // make sure game id is valid
+    const gameId = newGameId && newGameId.trim()
+    if (!gameId || gameId.length > 20) return false;
+
+    // make sure they chose what color piece to play
+    if (colorChoice !== 'black' && colorChoice !== 'white') return false;
+
+    return true;
+  };
+  const challenge = function () {
+    if (!validChallenge()) return;
+
+    const params = new URLSearchParams();
+    params.set('black', colorChoice === 'black' ? $myAddress : newOpponentAddress);
+    params.set('white', colorChoice === 'white' ? $myAddress : newOpponentAddress);
+    params.set('game', newGameId);
+
+    newOpponentAddress = '';
+    newGameId = '';
+
+    challengeAlert = `${location.pathname}?${params.toString()}`;
+  };
+
+  let challengeAlert;
+  let colorChoice;
 
   let winner;
   let pieceSpace = gameBoard.pieceSpace
@@ -679,8 +766,14 @@
 
     if (!validMove) return;
 
-    // TODO: call to tableland with new board state
-    gameBoard.doMove(piece, moveFrom, moveTo);
+    // call to tableland with new board state
+    // TODO: we are not waiting for response
+    moves.doMove(`${piece}:${moveFrom}:${moveTo}`);
+    updateBoard(piece, moveFrom, moveTo);
+  }
+
+  function updateBoard(piece, from, to) {
+    gameBoard.doMove(piece, from, to);
 
     // Svelte reactivity implementation means that we need to
     // trigger the changes to the variable assignments directly
@@ -712,9 +805,6 @@
 
             // if any move results in not being in check they are not in checkmate
             if (!ghostBoard.inCheck(opponentColor)) {
-              console.log('Not checkmate');
-              console.log(ghostBoard.inCheck(opponentColor));
-              console.log(JSON.stringify(ghostBoard, null, 4))
               return;
             }
 
@@ -743,8 +833,9 @@
     const pieceText = gameBoard.pieceSpace[from[0]][from[1]];
     const color = gameBoard.getPieceColor(pieceText)
 
-    // is it their turn
+    // is it their turn and there piece
     if (color !== turn) return false;
+    if (color !== $myColor) return false;
 
     // is the movement allowed for the piece
     if (!gameBoard.isValidPhysics(pieceText, from, to)) return false;
@@ -783,6 +874,23 @@
 </script>
 
 <main class="relative">
+
+  {#if challengeAlert}
+  <Modal bind:visible={challengeAlert} title="Challenge!">
+
+    <ModalBody>
+      Here's the link to
+      <a href="{challengeAlert}" class="hover:underline text-blue-300 text-ellipsis overflow-hidden">
+        your game
+      </a>.
+      You are 
+      You can share this with the opponent who controls the Wallet Address you specified and start playing!
+      Once you make your first move the game will be visible in your list of games
+    </ModalBody>
+
+  </Modal>
+  {/if}
+
   <div class="fixed left-4 right-4">
     {#each $alerts as alert}
     <div on:click="{alerts.clearAlert(alert)}" class="cursor-pointer">
@@ -790,16 +898,89 @@
     </div>
     {/each}
   </div>
-  <div class="head-info">
-    <h1 class="mt-8 text-3xl font-mono font-semibold">Tableland Chess</h1>
+  <div class="text-center">
+    <div class="mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold">
+      <div class="col-span-5">
+
+        <a href="?" class="hover:underline text-blue-300">Tableland Chess</a>
+
+        {#if $gameId}
+
+          Game ID: {$gameId} -
+
+          {#if !winner}
+
+            {#if $audience}
+            <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
+            {/if}
+
+            {#if !$audience}
+              {#if  turn === $myColor}
+              <b>Your Turn</b>
+              {/if}
+              {#if  turn !== $myColor}
+              <b>Opponent's Turn</b>
+              {/if}
+              {#if palyerInCheck}
+              <span class="text-red">{turn} in check!</span>
+              {/if}
+            {/if}
+
+          {/if}
+
+          {#if winner}
+          <h3>
+            Game Over
+            <span class="text-red">{winner} is the Winner!</span>
+          </h3>
+          {/if}
+
+        {/if}
+      </div>
+      {#if $myAddress}
+      <div class="text-sm text-center">
+        Connected with <b>{$myAddress.slice(0, 5)}...{$myAddress.slice(-5)}</b>
+        <span class="hover:underline cursor-pointer text-blue-300" on:click="{logout}">logout</span>
+      </div>
+      {/if}
+
+    </div>
+    
   </div>
   {#if !$connected}
   <div class="container-center">
     <button type="button" class="btn btn-connect cursor-pointer" on:click="{connect}">Connect To Tableland</button>
   </div>
   {/if}
+
   {#if $connected}
-  <div class="flex-container">
+  <div class="flex items-start mt-8">
+
+    {#if !$gameId}
+    <div class="w-96 pl-8">
+      {#if $games.length}
+      <p class="font-bold">Your Games</p>
+      {#each $games as game}
+        <a href="{game.link}" class="pl-4 hover:underline text-blue-300">{game.game_id}</a>
+        <br />
+      {/each}
+      {/if}
+    </div>
+
+    <div class="w-96">
+      Challenge someone!
+      <Input label="Opponent Address" bind:value="{newOpponentAddress}" />
+      <Input label="Game Id" bind:value="{newGameId}" placeholder="max 20 characters" />
+      <label class="block">Play as:</label>
+      {#each ['black', 'white'] as option}
+        <Radio value={option} bind:group={colorChoice}>{option}</Radio>
+        <br />
+      {/each}
+      <Button type="primary" on:click="{challenge}" disabled="{!validChallenge()}">Challenge</Button>
+    </div>
+    {/if}
+
+    {#if $gameId}
     <div class="chessboard">
 
       {#each pieceSpace as row, rowIndex}
@@ -821,24 +1002,15 @@
 
     </div>
     <div class="history">
-      {#if !winner}
-      <h3>
-        Current Turn: {turn}
-        {#if palyerInCheck}
-        <span class="text-red">In Check!</span>
-        {/if}
+      {#if !$audience}
+      <h3 class="max-w-sm">
+        You are playing as <b>{$myColor}</b>
       </h3>
       {/if}
 
-      {#if winner}
-      <h3>
-        Game Over
-        <span class="text-red">{winner} is the Winner!</span>
-      </h3>
-      {/if}
       <h3>Moves</h3>
 
-      <div class="flex-container">
+      <div class="flex items-start">
         <table class="move-table">
           <tr>
             <th></th>
@@ -869,6 +1041,7 @@
       </div>
 
     </div>
+    {/if}
   </div>
   {/if}
 </main>
@@ -902,23 +1075,14 @@
               inset 2px 2px 3px rgba(0, 0, 0, .6);
 }
 
-.head-info {
-  text-align: center;
-}
-
-.flex-container {
-  display: flex;
-  align-items: flex-start;
-}
-
 .container-center {
   padding: 2rem;
   text-align: center;
 }
 
 .chessboard {
-  width: 640px;
-  height: 640px;
+  width: 690px;
+  height: 690px;
   margin: 0 1rem;
   border: 25px solid #333;
 }
