@@ -148,11 +148,8 @@ const create = async function (tableland) {
 const burnIt = async function (tableId, signer, address) {
   const registryContract = TablelandTables__factory.connect(registryContractAddress, signer);
 
-  const burnTx = await registryContract.transferFrom(
-    address,
-  //'0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097'
-    '0x000000000000000000000000000000dead7ab1e2',
-    tableId,
+  const burnTx = await registryContract.burn(
+    tableId
   );
 
   await burnTx.wait();
