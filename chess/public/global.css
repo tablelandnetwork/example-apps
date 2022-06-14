@@ -442,23 +442,8 @@ Ensure the default browser behavior of the `hidden` attribute.
 .col-span-5 {
   grid-column: span 5 / span 5;
 }
-.col-span-4 {
-  grid-column: span 4 / span 4;
-}
-.col-span-2 {
-  grid-column: span 2 / span 2;
-}
-.float-right {
-  float: right;
-}
-.m-8 {
-  margin: 2rem;
-}
 .mt-8 {
   margin-top: 2rem;
-}
-.mr-4 {
-  margin-right: 1rem;
 }
 .block {
   display: block;
@@ -472,17 +457,8 @@ Ensure the default browser behavior of the `hidden` attribute.
 .grid {
   display: grid;
 }
-.w-48 {
-  width: 12rem;
-}
 .w-96 {
   width: 24rem;
-}
-.w-5\/6 {
-  width: 83.333333%;
-}
-.w-1\/6 {
-  width: 16.666667%;
 }
 .max-w-sm {
   max-width: 24rem;

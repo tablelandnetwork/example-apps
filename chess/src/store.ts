@@ -172,7 +172,7 @@ export const init = async function (token) {
   try {
     const connectParams = {
       // TODO: this will need to be changed to whatever network this gets deployed on
-      network: 'local', host: 'http://localhost:8080'
+      network: 'localhost', host: 'http://localhost:8080'
     };
     if (token) {
       connectParams.token = {token};

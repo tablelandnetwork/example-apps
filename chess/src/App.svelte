@@ -619,6 +619,21 @@
     return false;
   }
 
+  function colorTransform(i, color) {
+    if (color === 'black') return {
+      0: 7,
+      1: 6,
+      2: 5,
+      3: 4,
+      4: 3,
+      5: 2,
+      6: 1,
+      7: 0
+    }[i];
+
+    return i;
+  }
+
   // TODO: need a way to deal with pawns making it to the back line
 
 </script>
@@ -883,7 +898,6 @@
       <a href="{challengeAlert}" class="hover:underline text-blue-300 text-ellipsis overflow-hidden">
         your game
       </a>.
-      You are 
       You can share this with the opponent who controls the Wallet Address you specified and start playing!
       Once you make your first move the game will be visible in your list of games
     </ModalBody>
@@ -992,9 +1006,9 @@
           on:drop="{dropPiece}"
           on:dragstart="{pickupPiece}"
           on:dragend="{putdownPiece}"
-          data-location="{rowIndex},{squareIndex}"
+          data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
         >
-          {@html pieceSpace[rowIndex][squareIndex] }
+          {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
         </div>
 
       {/each}
