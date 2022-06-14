@@ -15,8 +15,8 @@ jobs:
         with:
           key: ${{ secrets.BUCKET_KEY }}
           secret: ${{ secrets.BUCKET_SECRET }}
-          bucket: "bafzbeidrdw7o6a7d5qyef4qarx5qf5s6hvw44hp5arav5gkljgctqrr6fi"
-          thread: "bafkyusjf6fdhzkub3fstqvdvis2nrpwxcefzeo3wtfw5wag37y3jz5q"
+          bucket: "bafzbeiclteu2vso4jigcppkvgedxr7gnlvhbjf7ifeqs327jediyehnj2m"
+          thread: "bafk4ruiez2yyfjxytdmavnwa2vd4pq75ac44baxcan4hwe24sqdiyqi"
           path: "chess/public"
       - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
       - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
