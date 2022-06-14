@@ -1,10 +1,11 @@
+import { ethers } from 'ethers';
 import { tick } from 'svelte';
 import { writable, derived } from 'svelte/store';
 import type { Writable } from "svelte/store";
-import { connect } from '@tableland/sdk';
+import { connect, ConnectOptions } from '@tableland/sdk';
 
 // globally unique tablename that all players use
-const CHESS_TABLENAME = 'chess_31337_2';
+const CHESS_TABLENAME = 'chess_5_11';
 const moveWaitDiration = 5000;
 
 // internals
@@ -170,9 +171,8 @@ export const connected = {
 
 export const init = async function (token) {
   try {
-    const connectParams = {
-      // TODO: this will need to be changed to whatever network this gets deployed on
-      network: 'localhost', host: 'http://localhost:8080'
+    const connectParams: ConnectOptions = {
+      chain: 'ethereum-goerli'
     };
     if (token) {
       connectParams.token = {token};
@@ -180,9 +180,18 @@ export const init = async function (token) {
 
     _tableland = await connect(connectParams);
 
-    localStorage.setItem('tableland.token', _tableland.token.token);
+    if (!token) {
+      await _tableland.siwe();
+      localStorage.setItem('tableland.token', _tableland.token.token);
+      //const addr = await _tableland.signer.getAddress();
+      //localStorage.setItem('tableland.address', addr);
+    }
 
-    const addr = await _tableland.signer.getAddress();
+    const decodedToken = atob(localStorage.getItem('tableland.token'));
+
+    const message = JSON.parse(decodedToken);
+    const addr = ethers.utils.verifyMessage(message.message, message.signature);
+
     myAddress.update(address => addr);
     setConnected(true);
 
@@ -201,6 +210,7 @@ export const init = async function (token) {
       await games.loadGame(gameId, _opponentAddress);
     }
   } catch (err) {
+    console.log(err);
     alerts.addAlert(err.message, 'error');
   }
 };

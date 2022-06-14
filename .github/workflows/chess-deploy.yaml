@@ -1,0 +1,27 @@
+name: "Textile Bucket - Deploy Tableland Chess App"
+on:
+  push:
+    branches:
+      - chess-deploy
+jobs:
+  deploy: # make sure the action works on a clean machine without building
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: push # push to a known bucket
+        id: bucket
+        uses: "textileio/github-action-buckets@master"
+        with:
+          key: ${{ secrets.BUCKET_KEY }}
+          secret: ${{ secrets.BUCKET_SECRET }}
+          bucket: "bafzbeidrdw7o6a7d5qyef4qarx5qf5s6hvw44hp5arav5gkljgctqrr6fi"
+          thread: "bafkyusjf6fdhzkub3fstqvdvis2nrpwxcefzeo3wtfw5wag37y3jz5q"
+          path: "chess/public"
+      - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
+      - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
+      - run: echo "ipfs link - ${{ steps.bucket.outputs.ipfsUrl }}"
+      - run: echo "ipns - ${{ steps.bucket.outputs.ipns }}"
+      - run: echo "ipns link - ${{ steps.bucket.outputs.ipnsUrl }}"
+      - run: echo "hub - ${{ steps.bucket.outputs.hub }}"
+      - run: echo "www - ${{ steps.bucket.outputs.www }}"
