@@ -17,7 +17,7 @@ jobs:
           secret: ${{ secrets.BUCKET_SECRET }}
           bucket: "bafzbeiclteu2vso4jigcppkvgedxr7gnlvhbjf7ifeqs327jediyehnj2m"
           thread: "bafk4ruiez2yyfjxytdmavnwa2vd4pq75ac44baxcan4hwe24sqdiyqi"
-          path: "chess/public"
+          path: "chess/public/"
       - run: echo "bucket - ${{ steps.bucket.outputs.key }}"
       - run: echo "ipfs - ${{ steps.bucket.outputs.ipfs }}"
       - run: echo "ipfs link - ${{ steps.bucket.outputs.ipfsUrl }}"
