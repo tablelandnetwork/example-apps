@@ -9,7 +9,7 @@ const CHESS_TABLENAME = 'chess_5_11';
 const moveWaitDiration = 5000;
 
 // internals
-let _audience, _tableland, _gameId, _address, _opponentAddress, _myColor, _moves;
+let _audience, _tableland, _gameId, _address, _opponentAddress, _myColor, _moves, _white, _black;
 
 // RPC responds with rows and columns in separate arrays, this will combine to an array of objects
 const parseResponse = function (data: {rows: any[], columns: {name: string}[]}) {
@@ -49,6 +49,7 @@ export const moves = {
   doMove: async function (move) {
     try {
       if (!_tableland) throw new Error('you must connect to Tableland before playing');
+      if (_audience) return;
 
       await _tableland.write(sqlStatements.doMove(_gameId, move));
 
@@ -58,12 +59,14 @@ export const moves = {
 
       moves.listenForMoves();
     } catch (err) {
+      console.log(err);
       alerts.addAlert(err.message, 'error');
     }
   },
-  listenForMoves: function (forever = false) {
+  listenForMoves: function (black = _black, white = _white, forever = false) {
+    if (!black || !white) return;
     const intervalId = setInterval(async function () {
-      const res = await _tableland.read(sqlStatements.loadGame());
+      const res = await _tableland.read(sqlStatements.loadGame(_gameId, black, white));
 
       const game = parseResponse(res);
       if (game.length > _moves.length) {
@@ -118,16 +121,17 @@ export const games = {
 
       setGames(games);
     } catch (err) {
+      console.log(err);
       alerts.addAlert(err.message, 'error');
     }
   },
-  loadGame: async function (loadGameId, opponentAddress) {
+  loadGame: async function (loadGameId, black, white) {
     try {
       if (!_tableland) throw new Error('you must connect to Tableland before playing');
       gameId.update(gid => loadGameId);
       await tick();
 
-      const res = await _tableland.read(sqlStatements.loadGame());
+      const res = await _tableland.read(sqlStatements.loadGame(loadGameId, black, white));
 
       const game = parseResponse(res);
       setMoves(game.map(move => move.move));
@@ -137,11 +141,15 @@ export const games = {
         myColor.update(c => color);
       }
 
-      // If this player made the last move, start waiting for the other player to make their move
-      if (game.length && game[game.length - 1].player_address === _address) {
-        moves.listenForMoves();
+      if (_audience) {
+        // If the user is in the audience listen forever
+        moves.listenForMoves(black, white, true);
+      } else if (game.length && game[game.length - 1].player_address === _address) {
+        // If this player made the last move, start waiting for the other player to make their move
+        moves.listenForMoves(black, white);
       }
     } catch (err) {
+      console.log(err);
       alerts.addAlert(err.message, 'error');
     }
   }
@@ -196,18 +204,18 @@ export const init = async function (token) {
     setConnected(true);
 
     const params = new URLSearchParams(location.search);
-    const white = params.get('white');
-    const black = params.get('black');
+    _white = params.get('white');
+    _black = params.get('black');
     const gameId = params.get('game');
 
-    if (white && black && gameId) {
-      if (addr === white || addr === black) {
-        _opponentAddress = white === addr ? black : white;
+    if (_white && _black && gameId) {
+      if (addr === _white || addr === _black) {
+        _opponentAddress = _white === addr ? _black : _white;
       } else {
         audience.set(true);
       }
 
-      await games.loadGame(gameId, _opponentAddress);
+      await games.loadGame(gameId, _black, _white);
     }
   } catch (err) {
     console.log(err);
@@ -234,15 +242,15 @@ const getMyColor = function (game) {
 };
 
 const sqlStatements = {
-  doMove: (gameId, move) => `INSERT INTO ${CHESS_TABLENAME} (player_address, game_id, move) VALUES ('${_address}', '${gameId}', '${move}');`,
+  doMove: (gameId: string, move: string) => `INSERT INTO ${CHESS_TABLENAME} (player_address, game_id, move) VALUES ('${_address}', '${gameId}', '${move}');`,
   myMoves: () => `SELECT * FROM ${CHESS_TABLENAME} WHERE player_address = '${_address}';`,
-  loadGame: () => `
+  loadGame: (game: string, black: string, white: string) => `
     SELECT * FROM ${CHESS_TABLENAME}
-    WHERE game_id = '${_gameId}'
-      AND (player_address = '${_address}' OR player_address = '${_opponentAddress}')
+    WHERE game_id = '${game}'
+      AND (player_address = '${black}' OR player_address = '${white}')
     ORDER BY move_id ASC;
   `,
-  getGames: (uniqueGames) => `
+  getGames: (uniqueGames: string[]) => `
     SELECT * FROM ${CHESS_TABLENAME}
     WHERE game_id IN ('${uniqueGames.join('\',\'')}');
   `
