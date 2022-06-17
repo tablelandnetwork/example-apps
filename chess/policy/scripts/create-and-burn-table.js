@@ -6,21 +6,31 @@ const { connect } = require('@tableland/sdk');
 const { TablelandTables__factory } = require("@tableland/eth");
 const { Wallet, providers } = require('ethers');
 
+// WARN: uncomment addresses per your network needs
 // Görli
-const registryContractAddress = '0xa4b0729f02C6dB01ADe92d247b7425953d1DbA25';
-const policyContractAddress = '0x6eb867eAA6aa22125f0bBe9Ec900F5B0Bb5b0927';
+//const registryContractAddress = '0xa4b0729f02C6dB01ADe92d247b7425953d1DbA25';
+// Local
+//const registryContractAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+//const policyContractAddress = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
 
 const go = async function () {
     try {
         const [account] = await hre.ethers.getSigners();
 
-        //await connect({signer: signer, network: 'optimism-kovan-staging', host: 'https://staging.tableland.network'});
-        const tableland = await connect({
-          signer: account,
-          chain: 'ethereum-goerli'
-        });
+        // WARN: uncomment connection per your network needs
+        //const tableland = await connect({
+          //signer: account,
+          //chain: 'ethereum-goerli'
+        //});
+        //const tableland = await connect({
+          //signer: account,
+          //chain: 'custom',
+          //contract: registryContractAddress,
+          //host: 'http://localhost:8080'
+        //});
 
-        const tableId = 11;//await create(tableland);
+
+        const tableId = await create(tableland);
 
         await setController(tableId, account, account.address);
 
@@ -76,9 +86,8 @@ const create = async function (tableland) {
 const burnIt = async function (tableId, signer, address) {
   const registryContract = TablelandTables__factory.connect(registryContractAddress, signer);
 
-  const burnTx = await registryContract.transferFrom(
+  const burnTx = await registryContract.lock(
     address,
-    '0x000000000000000000000000000000000000dead',
     tableId,
   );
   //const burnTx = await registryContract.lock(tableId);
