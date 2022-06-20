@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { createPinia, defineStore, setMapStoreSuffix } from 'pinia';
-import { connect } from '@tableland/sdk';
+import { connect, ConnectOptions } from '@tableland/sdk';
 import { PreparedStatement } from 'pg-promise';
 import { useRuntimeConfig } from '#imports';
 
@@ -17,9 +17,14 @@ const getConnection = function () {
   return async function (options?: any) {
     if (connection) return connection;
 
-    connection = await connect({
-      host: options.host as string
-    });
+    const params = {
+      chain: options.chain
+    };
+    if (options.contract) params.contract = options.contract;
+    if (options.host) params.host = options.host;
+
+    connection = await connect(params);
+    await connection.siwe();
 
     return connection;
   };
@@ -31,7 +36,7 @@ const getProvider = function () {
   return function (options?: any) {
     if (provider) return provider;
 
-    provider = new ethers.providers.AlchemyProvider('rinkeby', options.apiKey);
+    provider = new ethers.providers.AlchemyProvider('goerli', options.apiKey);
 
     return provider;
   };
@@ -44,8 +49,10 @@ export const store = defineStore('$store', {
 
     return {
       config: {
-        validatorHost: config.public.validatorHost,
-        validatorNet: config.public.validatorNet,
+        host: config.public.validatorHost,
+        chain: config.public.chain,
+        contract: config.public.contract,
+        network: config.public.validatorNet,
         accountService: config.public.accountService,
         alchemyApiKey: config.public.alchemyApiKey
       },
@@ -77,10 +84,8 @@ export const store = defineStore('$store', {
     connect: async function () {
       try {
         // connect to tableland
-        console.log(`connecting to validator at: ${this.config.validatorHost}`);
-        const tableland = await getConnection({
-          host: this.config.validatorHost as string
-        });
+        console.log(`connecting to validator at: ${this.config.host}`);
+        const tableland = await getConnection(this.config);
 
         // NOTE: there's a subtlety here.  By calling `list` we are only considering tables the user owns
         //       this avoids the, currently impossible, case that someone transfers ownership.  In the
@@ -101,26 +106,34 @@ export const store = defineStore('$store', {
         if (!myTweetsTable) {
           this.alert({
             severity: 'info',
-            content: 'Creating your Tweets table, you will have to pay gas for this. It usually takes about a minute. \nNOTE: make sure you\'re on Rinkeby!'
+            content: 'Creating your Tweets table, you will have to pay gas for this. It usually takes about a minute. \nNOTE: make sure you\'re on Goerli!'
           });
-          myTweetsTable = await tableland.create(sqlStatements.createMyTweets(address));
+          
+          myTweetsTable = await tableland.create(
+            sqlStatements.schemaMyTweets(),
+            `${tablePrefixTweets}${addrTrunc(address)}`
+          );
         }
         if (!whoIFollowTable) {
           this.alert({
             severity: 'info',
-            content: 'Creating your Following table, you will have to pay gas for this. It usually takes about a minute. \nNOTE: make sure you\'re on Rinkeby!'
+            content: 'Creating your Following table, you will have to pay gas for this. It usually takes about a minute. \nNOTE: make sure you\'re on Goerli!'
           });
-          whoIFollowTable = await tableland.create(sqlStatements.createWhoIFollow(address));
+
+          whoIFollowTable = await tableland.create(
+            sqlStatements.schemaWhoIFollow(),
+            `${tablePrefixWIF}${addrTrunc(address)}`
+          );
         }
 
         this.myTweetsTable = myTweetsTable.name;
         this.whoIFollowTable = whoIFollowTable.name;
 
-        const tweetsRes = await tableland.query(`SELECT * FROM ${myTweetsTable.name}`);
-        const followRes = await tableland.query(`SELECT * FROM ${whoIFollowTable.name}`);
+        const tweetsRes = await tableland.read(`SELECT * FROM ${myTweetsTable.name}`);
+        const followRes = await tableland.read(`SELECT * FROM ${whoIFollowTable.name}`);
 
-        this.myTweets = parseRpcResponse(tweetsRes.data);
-        this.whoIFollow = parseRpcResponse(followRes.data);
+        this.myTweets = parseRpcResponse(tweetsRes);
+        this.whoIFollow = parseRpcResponse(followRes);
 
         // automatically follow yourself
         if (!this.whoIFollow.find(account => account.account_address === this.myAddress)) {
@@ -143,34 +156,15 @@ export const store = defineStore('$store', {
         this.connected = true;
 
       } catch (err) {
-        throw err;
-      }
-    },
-    getAccount: async function (params) {
-      try {
-        const tableland = params.tableland;
-        const address = params.address;
-
-        const myAccountRes = await tableland.query(sqlStatements.getMyAccount(address));
-        const accountRows = parseRpcResponse(myAccountRes.data);
-        const account = accountRows[0];
-        if (!account) return this.init(params);
-        this.myAccount = account;
-      } catch (err) {
-        // TODO: better parsing of error to determine if this is a missing account or something else
-        if (err.message.match(/does not exist/i) && !params.retry) {
-          return this.init(params);
-        }
+        console.log(err);
         throw err;
       }
     },
     tweet: async function (chirp) {
       try {
-        const tableland = await getConnection({
-          host: this.config.validatorHost as string
-        });
+        const tableland = await getConnection(this.config);
 
-        await tableland.query(sqlStatements.writeTweet({
+        await tableland.write(sqlStatements.writeTweet({
           table: this.myTweetsTable,
           tweet: chirp.tweet,
           address: this.myAddress
@@ -182,11 +176,9 @@ export const store = defineStore('$store', {
       }
     },
     getFeed: async function () {
-      const tableland = await getConnection({
-        host: this.config.validatorHost as string
-      });
+      const tableland = await getConnection(this.config);
 
-      const following = parseRpcResponse((await tableland.query(sqlStatements.getFollowing(this.whoIFollowTable))).data);
+      const following = parseRpcResponse((await tableland.read(sqlStatements.getFollowing(this.whoIFollowTable))));
 
       let tweets = [];
 
@@ -201,8 +193,8 @@ export const store = defineStore('$store', {
 
         const username = user.nickname ? `${user.nickname} (${account})` : account;
 
-        const res = await tableland.query(sqlStatements.getTweets(table));
-        const twits = parseRpcResponse(res.data);
+        const res = await tableland.read(sqlStatements.getTweets(table));
+        const twits = parseRpcResponse(res);
 
         tweets = tweets.concat(twits.map(tweet => {
           return {
@@ -220,13 +212,11 @@ export const store = defineStore('$store', {
     },
     findFollowers: async function (address) {
       try {
-        const tableland = await getConnection({
-          host: this.config.validatorHost as string
-        });
+        const tableland = await getConnection(this.config);
 
-        const res = await tableland.query(sqlStatements.findFollowers(address, this.myAddress));
+        const res = await tableland.read(sqlStatements.findFollowers(address, this.myAddress));
 
-        const results = parseRpcResponse(res.data).filter(account => {
+        const results = parseRpcResponse(res).filter(account => {
           return account.user_address !== this.myAddress
         }).filter(account => {
           return !this.whoIFollow.find(follow => follow.account_address === account.user_address);
@@ -241,11 +231,9 @@ export const store = defineStore('$store', {
       try {
         if (params.newNickname === params.oldNickname) return;
 
-        const tableland = await getConnection({
-          host: this.config.validatorHost as string
-        });
+        const tableland = await getConnection(this.config);
 
-        await tableland.query(sqlStatements.updateNickname({
+        await tableland.write(sqlStatements.updateNickname({
           followTable: this.whoIFollowTable,
           nickname: params.newNickname,
           account: params.account_address
@@ -256,11 +244,9 @@ export const store = defineStore('$store', {
     },
     followAccount: async function (account) {
       try {
-        const tableland = await getConnection({
-          host: this.config.validatorHost as string
-        });
+        const tableland = await getConnection(this.config);
 
-        await tableland.query(sqlStatements.addFollower({...account, table: this.whoIFollowTable}));
+        await tableland.write(sqlStatements.addFollower({...account, table: this.whoIFollowTable}));
 
         await this.getFeed();
       } catch (err) {
@@ -283,6 +269,24 @@ export const store = defineStore('$store', {
         // just throw the error to avoid and endless loop of retrying
         this.getAccount({...params, retry: true});
       } catch (err) {
+        throw err;
+      }
+    },
+    getAccount: async function (params) {
+      try {
+        const tableland = params.tableland;
+        const address = params.address;
+
+        const myAccountRes = await tableland.read(sqlStatements.getMyAccount(address));
+        const accountRows = parseRpcResponse(myAccountRes);
+        const account = accountRows[0];
+        if (!account) return this.init(params);
+        this.myAccount = account;
+      } catch (err) {
+        // TODO: better parsing of error to determine if this is a missing account or something else
+        if (err.message.match(/does not exist/i) && !params.retry) {
+          return this.init(params);
+        }
         throw err;
       }
     },
@@ -317,7 +321,7 @@ export const store = defineStore('$store', {
         })
       });
 
-      return response.json();
+      return response;
     }
   }
 });
@@ -344,7 +348,7 @@ const parseRpcResponse = function (data: {rows: any[], columns: {name: string}[]
 
 const tablePrefixWIF = 'gila2_who_i_follow_';
 const tablePrefixTweets = 'gila2_tweets_';
-const allUsersTable = 'gila_all_users_680';
+const allUsersTable = 'gila_all_users_5_16';
 
 const addrTrunc = (address) => address.slice(2,8).toLowerCase();
 const newSqlDate = () => Date.now();
@@ -354,19 +358,19 @@ const sqlStatements = {
   // owned by dev
   getMyAccount: (address) => `SELECT * FROM ${allUsersTable} WHERE user_address = '${address}';`,
   // each user owns one of these
-  createWhoIFollow: (address) => `CREATE TABLE ${tablePrefixWIF}${addrTrunc(address)} (
+  schemaWhoIFollow: () => `
     account_address TEXT PRIMARY KEY,
     tweets_tablename TEXT,
     nickname TEXT,
     unfollowed BOOLEAN not null default false
-  );`,
-  createMyTweets: (address) => `CREATE TABLE ${tablePrefixTweets}${addrTrunc(address)} (
+  `,
+  schemaMyTweets: () => `
     tweet TEXT,
     tweet_id INT GENERATED ALWAYS AS IDENTITY,
     in_replyto_table TEXT,
     in_replyto_id TEXT,
     created_at BIGINT
-  );`,
+  `,
   getTweets: (tableName) => `
     SELECT * FROM ${tableName}
       ORDER BY created_at DESC

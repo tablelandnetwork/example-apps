@@ -3,7 +3,7 @@
     "test": "TEST=true node test.js"
   },
   "dependencies": {
-    "@tableland/sdk": "^0.0.1",
+    "@tableland/sdk": "^1.0.0",
     "dotenv": "^16.0.0",
     "ethers": "^5.6.2",
     "node-fetch": "^2.6.7"

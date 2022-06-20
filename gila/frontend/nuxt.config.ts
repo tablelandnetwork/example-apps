@@ -5,8 +5,9 @@ import { defineNuxtConfig } from 'nuxt'
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network',
-      validatorNet: process.env.NETWORK || 'testnet',
+      validatorHost: process.env.VALIDATOR,
+      chain: process.env.CHAIN || 'ethereum-goerli',
+      contract: process.env.CONTRACT || '',
       accountService: process.env.SERVICE || 'localhost:1337',
       alchemyApiKey: process.env.ALCHEMY || ''
     }

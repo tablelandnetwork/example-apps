@@ -4,10 +4,9 @@ global.fetch = fetch;
 const { connect } = require('@tableland/sdk');
 const { Wallet, providers, utils } = require('ethers');
 
-
+const allUsersTable = 'gila_all_users_5_16';
 const network = {
-    network: 'testnet',
-    host: 'https://testnet.tableland.network'
+  chain: 'ethereum-goerli'
 };
 
 exports.handler = async function (event) {
@@ -47,7 +46,7 @@ console.log('getting Wallet for Gila users table owner');
         const wallet = new Wallet(privateKey);
 
         // We also need an RPC provider to connect to
-        const provider = new providers.AlchemyProvider('rinkeby', process.env.ALCHEMY_KEY);
+        const provider = new providers.AlchemyProvider('goerli', process.env.ALCHEMY_KEY);
         const signer = wallet.connect(provider);
 
 console.log('connecting to tableland');
@@ -56,9 +55,9 @@ console.log('connecting to tableland');
 
 console.log('sending query to insert new user account');
 
-        // NOTE: gila_all_users_680 table was createed ahead of time, via relevant script
-        return await tableland.query(`
-            INSERT INTO gila_all_users_680 (
+        // NOTE: all users table table was createed ahead of time, via relevant script
+        return await tableland.write(`
+            INSERT INTO ${allUsersTable} (
                 user_address,
                 tweets_tablename,
                 followers_tablename,
