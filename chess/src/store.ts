@@ -5,7 +5,7 @@ import type { Writable } from "svelte/store";
 import { connect, ConnectOptions } from '@tableland/sdk';
 
 // globally unique tablename that all players use
-const CHESS_TABLENAME = 'chess_5_11';
+const CHESS_TABLENAME = 'chess_31337_2';//'chess_5_11';
 const moveWaitDiration = 5000;
 
 // internals
@@ -179,8 +179,13 @@ export const connected = {
 
 export const init = async function (token) {
   try {
+    //const connectParams: ConnectOptions = {
+      //chain: 'ethereum-goerli'
+    //};
     const connectParams: ConnectOptions = {
-      chain: 'ethereum-goerli'
+      host: 'http://localhost:8080',
+      chain: 'custom',
+      contract: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'
     };
     if (token) {
       connectParams.token = {token};

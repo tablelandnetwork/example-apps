@@ -14,14 +14,19 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const accounts = await hre.ethers.getSigners();
+  const [account0, account1] = await hre.ethers.getSigners();
+  // for active networks we need to deploy with the first account, which is specified in config
+  //const account = account0;
+  // for local dev we need to deploy with an account that is different than the one the validator is using
+  const account = account1;
+
   const Chess = await hre.ethers.getContractFactory("Chess");
-  // NOTE: for local dev we need to deploy with an account that is different than the one the validator is using
-  const chess = await Chess.connect(accounts[0]).deploy();
+
+  const chess = await Chess.connect(account).deploy();
 
   await chess.deployed();
 
-  console.log("Chess deployed to:", chess.address, "By account: ", accounts[0].address);
+  console.log("Chess deployed to:", chess.address, "By account: ", account.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

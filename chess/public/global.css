@@ -484,6 +484,10 @@ Ensure the default browser behavior of the `hidden` attribute.
 .border {
   border-width: 1px;
 }
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
 .pl-8 {
   padding-left: 2rem;
 }
