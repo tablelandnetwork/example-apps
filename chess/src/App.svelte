@@ -1,4 +1,14 @@
 <script lang="ts" context="module">
+  const pieceCodes = {
+    'black-rook': '&#9820;',
+    'black-knight': '&#9822;',
+    'black-bishop': '&#9821;',
+    'black-queen': '&#9819;',
+    'white-rook': '&#9814;',
+    'white-knight': '&#9816;',
+    'white-bishop': '&#9815;',
+    'white-queen': '&#9813;'
+  };
   const getInitialState = function () {
     return [
       [
@@ -236,17 +246,16 @@
     this.blackCanCastleShort = params.blackCanCastleShort || true
   };
 
-  Board.prototype.doMove = function (piece, from, to) {
+  Board.prototype.doMove = function (piece, from, to, promoted) {
     const color = this.getPieceColor(piece);
     const pieceName = this.getPieceName(piece);
 
-    console.log(`Moving ${piece} from ${from} to ${to}`);
+    console.log(`Moving ${piece} from ${from} to ${to} ${promoted ? ` promoting to ${promoted}` : ''}`);
 
     // NOTE: it's important that we do these steps in the correct order
 
     // en passant is the only move in chess where the captured piece is not
-    // on the square the capturing piece is moving to
-
+    // on the square the capturing piece is moving to, we handle that here
     const enPassant = this.isEnPassant(from, to);
     if (enPassant) {
       if (color === 'black') this.pieceSpace[to[0] - 1][to[1]] = '';
@@ -257,7 +266,7 @@
       from: from,
       to: to,
       piece: piece,
-      notation: this.getMoveNotation(from, to),
+      notation: this.getMoveNotation(from, to, promoted),
       capture: this.getCapturedPiece(from, to),
       enPassant: enPassant
     });
@@ -265,6 +274,30 @@
     // do the actual move
     this.pieceSpace[to[0]][to[1]] = this.pieceSpace[from[0]][from[1]];
     this.pieceSpace[from[0]][from[1]] = '';
+
+    // if needed to the promotion
+    if (promoted) {
+      const promoCount = this.pieceSpace.reduce((highestNumber, row) => {
+        const rowNum = row.reduce((highestNum, cell) => {
+          if (this.getPieceColor(cell) !== color) return;
+          if (this.getPieceName(cell) !== promoted) return;
+
+          const numString = this.getPieceNumber(cell);
+          if (numString > highestNumber) return numString;
+
+          return highestNum
+        }, '0');
+
+        if (rowNum > highestNumber) return rowNum;
+
+        return highestNumber;
+      }, '0');
+      this.pieceSpace[to[0]][to[1]] = `<div
+          class="piece ${color}-${promoted}"
+          data-piece="${color}-${promoted}${Number(promoCount) + 1}"
+          draggable="true"
+        >${pieceCodes[`${color}-${promoted}`]}</div>`
+    }
 
     // if castling also move the second piece in the castling
     if (this.isCastle(pieceName, from, to)) {
@@ -357,7 +390,7 @@
     return true;
   };
 
-  Board.prototype.getMoveNotation = function (from, to) {
+  Board.prototype.getMoveNotation = function (from, to, promoted) {
     const fromSquare = rowMap[from[0]] + colMap[from[1]];
     const toSquare = rowMap[to[0]] + colMap[to[1]];
 
@@ -365,7 +398,7 @@
     const piece = pieceMap[this.getPieceName(this.pieceSpace[from[0]][from[1]])];
     const capture = !!this.pieceSpace[to[0]][to[1]] || this.isEnPassant(from, to);
 
-    return `${piece}${fromSquare}${capture ? 'x' : '-'}${toSquare}`;
+    return `${piece}${fromSquare}${capture ? 'x' : '-'}${toSquare}${promoted ? pieceMap[promoted] : ''}`;
   };
 
   // this gets the piece that would be captured if from->to move happend
@@ -423,6 +456,23 @@
   Board.prototype.getPieceColor = function (text) {
     if (text.match('white')) return 'white';
     if (text.match('black')) return 'black';
+
+    return '';
+  };
+
+  // max of 10 pieces with same type
+  Board.prototype.getPieceNumber = function (text) {
+    if (text.match('0')) return '0';
+    if (text.match('1')) return '1';
+    if (text.match('2')) return '2';
+    if (text.match('3')) return '3';
+    if (text.match('4')) return '4';
+    if (text.match('5')) return '5';
+    if (text.match('6')) return '6';
+    if (text.match('7')) return '7';
+    if (text.match('8')) return '8';
+    if (text.match('9')) return '9';
+
 
     return '';
   };
@@ -639,7 +689,10 @@
 </script>
 
 <script lang="ts">
-  import { tick, onMount } from 'svelte';
+  import {
+    tick,
+    onMount
+  } from 'svelte';
   import { utils } from 'ethers';
   import {
     Alert,
@@ -682,6 +735,7 @@
         const piece = parts[0];
         const from = parts[1].split(',');
         const to = parts[2].split(',');
+        const promoted = parts[3]
 
         if (!(piece && from && to)) {
           alerts.addAlert(
@@ -690,7 +744,7 @@
           );
         }
 
-        updateBoard(piece, from, to);
+        updateBoard(piece, from, to, promoted);
         await tick();
       }
     });
@@ -739,6 +793,8 @@
 
   let challengeAlert;
   let colorChoice;
+  let showPromoteModal = false;
+  let promoteColor;
 
   let winner;
   let pieceSpace = gameBoard.pieceSpace
@@ -765,7 +821,7 @@
    eve.preventDefault();
   }
 
-  function dropPiece(eve) {
+  async function dropPiece(eve) {
     eve.preventDefault();
     if (winner) return;
     const moveTo = eve.currentTarget.dataset.location.split(',').map(str => parseInt(str, 10));
@@ -781,14 +837,16 @@
 
     if (!validMove) return;
 
+    const promotedTo = await getPromotion(piece, moveFrom, moveTo);
+
     // call to tableland with new board state
     // TODO: we are not waiting for response
-    moves.doMove(`${piece}:${moveFrom}:${moveTo}`);
-    updateBoard(piece, moveFrom, moveTo);
+    moves.doMove(`${piece}:${moveFrom}:${moveTo}:${promotedTo}`);
+    updateBoard(piece, moveFrom, moveTo, promotedTo);
   }
 
-  function updateBoard(piece, from, to) {
-    gameBoard.doMove(piece, from, to);
+  function updateBoard(piece, from, to, promoted) {
+    gameBoard.doMove(piece, from, to, promoted);
 
     // Svelte reactivity implementation means that we need to
     // trigger the changes to the variable assignments directly
@@ -865,6 +923,40 @@
     return true;
   }
 
+  const promoter = {
+    listeners: [],
+    once: function (listener) {
+      this.listeners.push(listener);
+    },
+    promote: function (data) {
+      while (this.listeners.length) {
+        this.listeners.pop()(data);
+      }
+    }
+  }
+
+  function getPromotion (piece, moveFrom, moveTo) {
+    // if it's not a pawn there's nothing to do
+    if (!piece.match('pawn')) return '';
+
+    // see if the pawn made it to the backline
+    const color = gameBoard.getPieceColor(piece);
+    const row = moveTo[0];
+    const backline = color === 'black' ? row === 7 : row === 0;
+
+    if (!backline) return '';
+
+    showPromoteModal = true;
+    promoteColor = color;
+    return new Promise(function (resolve, reject) {
+      promoter.once(function (piece) {
+        showPromoteModal = false;
+        promoteColor = undefined;
+
+        resolve(piece);
+      });
+    });
+  }
 
   // get a clone of the board in it's current state.  This can be
   // used to see what potential moves would make a board look like
@@ -904,6 +996,51 @@
 
   </Modal>
   {/if}
+
+  <Modal bind:visible={showPromoteModal} title="Choose Promotion">
+
+    <ModalBody>
+      <div class="flex">
+        {#if promoteColor === 'black'}
+        <div
+          on:click="{() => promoter.promote('rook')}"
+          class="cursor-pointer px-4"
+        >rook &#9820;</div>
+        <div
+          on:click="{() => promoter.promote('knight')}"
+          class="cursor-pointer px-4"
+        >knight &#9822;</div>
+        <div
+          on:click="{() => promoter.promote('bishop')}"
+          class="cursor-pointer px-4"
+        >bishop &#9821;</div>
+        <div
+          on:click="{() => promoter.promote('queen')}"
+          class="cursor-pointer px-4"
+        >queen &#9819;</div>
+        {/if}
+        {#if promoteColor === 'white'}
+        <div
+          on:click="{() => promoter.promote('rook')}"
+          class="cursor-pointer px-4"
+        >rook &#9814;</div>
+        <div
+          on:click="{() => promoter.promote('knight')}"
+          class="cursor-pointer px-4"
+        >knight &#9816;</div>
+        <div
+          on:click="{() => promoter.promote('bishop')}"
+          class="cursor-pointer px-4"
+        >bishop &#9815;</div>
+        <div
+          on:click="{() => promoter.promote('queen')}"
+          class="cursor-pointer px-4"
+        >queen &#9813;</div>
+        {/if}
+      </div>
+    </ModalBody>
+
+  </Modal>
 
   <div class="fixed left-4 right-4">
     {#each $alerts as alert}
