@@ -8,6 +8,12 @@ import { connect, ConnectOptions } from '@tableland/sdk';
 const CHESS_TABLENAME = 'chess_31337_2';//'chess_5_11';
 const moveWaitDiration = 5000;
 
+// TODO: use alchemy to get the games the user owns, and the games the user is actively playing
+
+// TODO: enable minting a game with two players
+
+// TODO: enable adding a bounty to a game
+
 // internals
 let _audience, _tableland, _gameId, _address, _opponentAddress, _myColor, _moves, _white, _black;
 
@@ -83,6 +89,10 @@ export const moves = {
 const { subscribe: gamesSubscribe, set: setGames, update: updateGames } = writable([]);
 export const games = {
   subscribe: gamesSubscribe,
+
+  // TODO: active games should come from alchemy via `getPlayerGames(address)`, then games stored
+  //       in tableland that don't show up in those results are finished and we will want to get
+  //       them from the contract via `getGame(game_id)`
   findGames: async function (search) {
     try {
       if (!_tableland) throw new Error('you must connect to Tableland before playing');
