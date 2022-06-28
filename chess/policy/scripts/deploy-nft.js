@@ -4,6 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 const hre = require("hardhat");
+const { connect } = require("@tableland/sdk");
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -20,6 +21,17 @@ async function main() {
   // for local dev we need to deploy with an account that is different than the one the validator is using
   const account = account1;
 
+  //const tableland = await connect({
+    //chain: 'ethereum-goerli',
+    //signer: account
+  //});
+  const tableland = await connect({
+    host: 'http://localhost:8080',
+    chain: 'custom',
+    contract: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+    signer: account
+  });
+
   const GameToken = await hre.ethers.getContractFactory("GameToken");
 
   const gameToken = await GameToken.connect(account).deploy();
@@ -27,6 +39,22 @@ async function main() {
   await gameToken.deployed();
 
   console.log("GameToken deployed to:", gameToken.address, "By account: ", account.address);
+
+  const createTx = await tableland.create("chess_nft", `
+    id int,
+    name text,
+    description text,
+    image text,
+    external_url text,
+    animation_url text,
+    attributes json
+  `);
+
+  console.log("Tableland Table created: " + createTx);
+
+  // TODO: this should be env
+  // https://staging.tableland.network/query?s=select json_build_object('name', concat('#', id), 'external_url', concat('https://tableland.xyz/rigs/', id), 'image', image, 'image_alpha', image_alpha, 'attributes',  json_agg(json_build_object('display_type', display_type, 'trait_type', trait_type, 'value', value))) from test_rigs_69_5 join test_rig_attributes_69_6 on test_rigs_69_5.id = test_rig_attributes_69_6.rig_id where id = 1 group by id;&mode=list
+  gameToken.setBaseUri(`http://localhost:8080/chain/31337/tables`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
