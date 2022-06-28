@@ -19,7 +19,7 @@ contract Chess is ITablelandController {
 
     function getPolicy(address caller)
         public
-        view
+        payable
         override
         returns(ITablelandController.Policy memory)
     {

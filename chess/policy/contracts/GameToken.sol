@@ -5,6 +5,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract GameToken is ERC721, Ownable {
     using Counters for Counters.Counter;
@@ -24,16 +25,43 @@ contract GameToken is ERC721, Ownable {
     mapping(address => uint256[]) private _playerGames;
 
     constructor() ERC721("GameToken", "MTK") {
-        setBaseURI("http://localhost:8080/chain/31337/tables/3/id/");
+        baseURI = "http://localhost:8080/query?mode=list&s=";
     }
 
-    function setBaseURI(string memory newURI) public onlyOwner {
-        baseURI = newURI;
+    /**
+     * @dev See {IERC721Metadata-tokenURI}.
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+
+        string memory player1 = _addressToString(_games[tokenId].player1);
+        string memory player2 = _addressToString(_games[tokenId].player2);
+        string memory tokenString = Strings.toString(tokenId);
+
+        return bytes(baseURI).length > 0 ?
+            string(
+                abi.encodePacked(
+                    baseURI,
+                    "select%20json_build_object('name',concat('#',id),'external_url',concat('https://localhost:3000?game=',id,'&black=",
+                    player2,
+                    "&white=",
+                    player1,
+                    "'),'animation_url',concat('https://localhost:3000?game=',id,'&black=",
+                    player2,
+                    "&white=",
+                    player1,
+                    "&animate=true'),'image',image,'attributes',json_agg(json_build_object('trait_type','player1','value',",
+                    player1,
+                    "),json_build_object('trait_type','player2','value',",
+                    player2,
+                    ")))%20from%20chess_31337_2%20where%20id%20=%20",
+                    tokenString,
+                    ";"
+                )
+            ) :
+            "";
     }
 
-    function _baseURI() internal view override returns (string memory) {
-        return baseURI;
-    }
 
     function mintGame(address to, address player1, address player2)
         public
@@ -197,6 +225,23 @@ contract GameToken is ERC721, Ownable {
                 _games[tokenId].balance = balance;
             }
         }
+    }
+
+    function _addressToString(address x) internal pure returns (string memory) {
+        bytes memory s = new bytes(40);
+        for (uint i = 0; i < 20; i++) {
+            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
+            bytes1 hi = bytes1(uint8(b) / 16);
+            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+            s[2*i] = char(hi);
+            s[2*i+1] = char(lo);
+        }
+        return string(s);
+    }
+
+    function char(bytes1 b) internal pure returns (bytes1 c) {
+        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
+        else return bytes1(uint8(b) + 0x57);
     }
 
 }
