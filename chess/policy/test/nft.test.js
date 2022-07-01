@@ -348,6 +348,26 @@ describe("Chess Game NFT Contract", function () {
     ).to.be.revertedWith("game does not exist");
   });
 
+  it("Should not allow adding bounty if the game is over", async function () {
+    const [account0, account1] = accounts;
+    const gameId = await getGame();
+
+    await expect(gameId).to.equal(BigNumber.from(0));
+
+    const concedeTx = await gameTokens
+      .connect(account1)
+      .concede(gameId);
+
+    await concedeTx.wait();
+
+    // No bounty allowed if hasn't been minted
+    await expect(
+      gameTokens
+      .connect(account0)
+      .setBounty(gameId, { value: ethers.utils.parseEther("10")})
+    ).to.be.revertedWith("game has ended");
+  });
+
   it("Should not allow concede if the game does not exist", async function () {
     const [account0] = accounts;
 

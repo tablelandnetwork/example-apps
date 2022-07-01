@@ -25,7 +25,7 @@ contract GameToken is ERC721, Ownable {
     mapping(address => uint256[]) private _playerGames;
 
     constructor() ERC721("GameToken", "MTK") {
-        baseURI = "http://localhost:8080/query?mode=list&s=";
+        baseURI = "https://13vtpw6ppk.execute-api.us-east-1.amazonaws.com/chess-nft-metadata?game=";
     }
 
     /**
@@ -42,26 +42,15 @@ contract GameToken is ERC721, Ownable {
             string(
                 abi.encodePacked(
                     baseURI,
-                    "select%20json_build_object('name',concat('#',id),'external_url',concat('https://localhost:3000?game=',id,'&black=",
-                    player2,
-                    "&white=",
-                    player1,
-                    "'),'animation_url',concat('https://localhost:3000?game=',id,'&black=",
-                    player2,
-                    "&white=",
-                    player1,
-                    "&animate=true'),'image',image,'attributes',json_agg(json_build_object('trait_type','player1','value',",
-                    player1,
-                    "),json_build_object('trait_type','player2','value',",
-                    player2,
-                    ")))%20from%20chess_31337_2%20where%20id%20=%20",
                     tokenString,
-                    ";"
+                    "&white=",
+                    player1,
+                    "&black=",
+                    player2
                 )
             ) :
             "";
     }
-
 
     function mintGame(address to, address player1, address player2)
         public
@@ -111,6 +100,7 @@ contract GameToken is ERC721, Ownable {
     {
         require(_games[tokenId].player1 > address(0), "game does not exist");
         require(_games[tokenId].player2 > address(0), "game does not exist");
+        require(_games[tokenId].winner == address(0), "game has ended");
         require(msg.value > 0, "bounty must be greater than zero");
         require(ownerOf(tokenId) != _games[tokenId].player1, "owner is a player");
         require(ownerOf(tokenId) != _games[tokenId].player2, "owner is a player");
