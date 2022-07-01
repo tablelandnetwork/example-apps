@@ -10,6 +10,8 @@ contract CanvasGame is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
     ITablelandTables private _tableland;
+
+    string private _baseURIString = "https://testnet.tableland.network/query?s=";
     string private _metadataTable;
     uint256 private _tableId;
     string private _tablePrefix = "canvas";
@@ -82,5 +84,30 @@ contract CanvasGame is ERC721URIStorage {
           ";"
         )
       );
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+      return _baseURIString;
+    }
+
+    function tokenURI(uint256 tokenId)
+      public
+      view
+      virtual
+      override
+      returns (string memory)
+    {
+        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+
+        string memory base = _baseURI();
+
+        return string.concat(
+          base, 
+          "SELECT%20row_to_json(*)%20FROM%20",
+          _metadataTable,
+          "%20WHERE%20id%3D",
+          Strings.toString(tokenId),
+          "&mode=list"
+        );
     }
 }
