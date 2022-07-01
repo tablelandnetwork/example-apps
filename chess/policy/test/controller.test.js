@@ -5,11 +5,17 @@ const { BigNumber } = require("ethers");
 
 describe("Chess", function () {
   let accounts;
+  let registry;
   let gameTokens;
   let chess;
 
   beforeEach(async function () {
     accounts = await ethers.getSigners();
+
+    const RegistryFactory = await ethers.getContractFactory("TablelandTables");
+    registry = await RegistryFactory.deploy();
+    await registry.deployed();
+
     const NftFactory = await ethers.getContractFactory("GameToken");
     gameTokens = await NftFactory.deploy();
     await gameTokens.deployed();
@@ -39,11 +45,29 @@ describe("Chess", function () {
     const [account0, account1] = accounts;
     const gameId1 = await getGame();
     const gameId2 = await getGame();
+console.log('Got Games...');
+    const tableTx = await registry
+      .connect(account0)
+      .createTable(account0.address, 'create statement');
 
-    const controller = await chess.connect(account0).getPolicy(account1.address);
+    const tableReceipt = await tableTx.wait();
+
+    const [, createEvent] = tableReceipt.events ?? [];
+    const tableId = createEvent.args.tableId;
+
+    console.log(tableId);
+
+    await registry.connect(account0).setController(account0.address, tableId, chess);
+
+    const runTx = await registry.connect(account0).runSql(account0.address, tableId, 'write query');
+    // TODO: look in event to see if policy is correct?
+    const runReceipt = await runTx.wait();
+    let [runEvent] = runReceipt.events ?? [];
+
+    const policy = runEvent.args.policy;
 
     expect(
-      controller.toString()
+      policy
     ).to.equal(
       `true,false,false,player_address = ${account1.address.toLowerCase()} AND game_id IN ('${gameId1}', '${gameId2}'),,`
     );

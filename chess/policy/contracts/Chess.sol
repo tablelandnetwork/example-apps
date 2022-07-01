@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@tableland/eth/contracts/ITablelandController.sol";
+import "@tableland/evm/contracts/ITablelandController.sol";
 import "./GameToken.sol";
 
 

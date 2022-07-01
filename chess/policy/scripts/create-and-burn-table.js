@@ -33,11 +33,8 @@ const go = async function () {
           host: 'http://localhost:8080'
         });
 
-
         const tableId = await create(tableland);
-
         await setController(tableId, account, account.address);
-
         await burnIt(tableId, account, account.address);
 
     } catch (err) {
