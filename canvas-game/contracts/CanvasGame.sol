@@ -41,6 +41,7 @@ contract CanvasGame is ERC721URIStorage {
         "_",
         Strings.toString(_tableId)
       );
+
     }
 
     function safeMint(address to) public returns (uint256) {
@@ -70,7 +71,7 @@ contract CanvasGame is ERC721URIStorage {
       require(y < 512 && 0 <= y, "Out of bounds");
       // bobby tables?
       _tableland.runSQL(
-        address(this),
+        msg.sender,
         _tableId,
         string.concat(
           "update ",
