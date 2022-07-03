@@ -47,4 +47,31 @@ describe("CanvasGame", function () {
 
     await expect(owner).to.equal(canvasGame.address);
   });
+
+  it("Should allow making a move", async function () {
+    // mint the token
+    const tx = await canvasGame
+      .connect(accounts[1])
+      .safeMint(accounts[1].address);
+
+    const receipt = await tx.wait();
+    const [, transferEvent] = receipt.events ?? [];
+    const tokenId = transferEvent.args!.tokenId;
+
+    const statement = "update canvas_31337_1 set x = 10 and y = 10 WHERE id = 0;";
+    await expect(canvasGame
+      .connect(accounts[1])
+      .makeMove(tokenId, 10, 10)
+    ).to.emit(registry, "RunSQL").withArgs(
+      canvasGame.address,
+      true,
+      1,
+      statement,
+      [ true, true, true, '', '', [], []]
+    );
+
+    //const moveReceipt = await moveTx.wait();
+    //const events = moveReceipt.events ?? [];
+
+  });
 });
