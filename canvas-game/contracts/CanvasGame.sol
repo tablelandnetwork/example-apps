@@ -71,7 +71,7 @@ contract CanvasGame is ERC721URIStorage {
       require(y < 512 && 0 <= y, "Out of bounds");
       // bobby tables?
       _tableland.runSQL(
-        msg.sender,
+        address(this),
         _tableId,
         string.concat(
           "update ",
