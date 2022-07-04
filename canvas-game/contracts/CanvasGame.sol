@@ -169,9 +169,26 @@ contract CanvasGame is ERC721URIStorage {
 
         string memory base = _baseURI();
 
+        string json_group = "";
+        string[] cols = ["id", "external_link", "x", "y"];
+        for (uint i; i < cols.length; i++) {
+          if (i > 0) {
+            json_group = string.concat(json_group,",");
+          }
+          json_group = string.concat(
+            json_group, 
+            "'",
+            cols[i],
+            "',",
+            cols[i]
+          );
+        }
+
         return string.concat(
           base, 
-          "SELECT%20row_to_json(*)%20FROM%20",
+          "SELECT%20",
+          json_group,
+          "%20FROM%20",
           _metadataTable,
           "%20WHERE%20id%3D",
           Strings.toString(tokenId),
@@ -185,9 +202,26 @@ contract CanvasGame is ERC721URIStorage {
     function contractURI() public view returns (string memory) {
         string memory base = _baseURI();
 
+        string json_group = "";
+        string[] cols = ["name", "description", "image", "external_link", "metadata", "address"];
+        for (uint i; i < cols.length; i++) {
+          if (i > 0) {
+            json_group = string.concat(json_group,",");
+          }
+          json_group = string.concat(
+            json_group, 
+            "'",
+            cols[i],
+            "',",
+            cols[i]
+          );
+        }
+
         return string.concat(
           base, 
-          "SELECT%20row_to_json(*)%20FROM%20",
+          "SELECT%20json_object(",
+          json_group,
+          ")%20FROM%20",
           _projectTable,
           "&mode=list"
         );
@@ -197,6 +231,23 @@ contract CanvasGame is ERC721URIStorage {
     * setExternalURL provides an example of how to update a field for every
     * row in an table. 
     */
+    function setExternalURL(string calldata externalURL) external onlyOwner() {
+      _externalURL = externalURL;
+      _tableland.runSQL(
+        address(this),
+        _metadataTableId,
+        string.concat(
+          "update ",
+          _metadataTable,
+          " set external_link = ",
+          externalURL,
+          "||'?tokenId='||id", // Turns every row's URL into a URL including get param for tokenId 
+          ";"
+        )
+      );
+    }
+
+
     function setExternalURL(string calldata externalURL) external onlyOwner() {
       _externalURL = externalURL;
       _tableland.runSQL(
