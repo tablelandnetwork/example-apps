@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@tableland/evm/contracts/ITablelandTables.sol";
-import "@tableland/evm/contracts/utils/TablelandDeployments.sol";
 
 contract CanvasGame is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
@@ -25,15 +24,19 @@ contract CanvasGame is ERC721URIStorage, Ownable {
 
 
     constructor(
+      address registry, 
       string memory projectName,
       string memory projectDescription,
       string memory projectImage,
       string memory projectLink
     ) ERC721("GameItem", "ITM") {
-      // Connect to the Tableland network
-      _tableland = TablelandDeployments.get();
+      /* 
+      * registry if the address of the Tableland registry. You can always find those
+      * here https://github.com/tablelandnetwork/evm-tableland#currently-supported-chains
+      */
+      _tableland = ITablelandTables(registry);
       /*
-        CREATE TABLE prefix_meta_chainId (int id, string name, string description, string external_link, int x, int y);
+      *  CREATE TABLE prefix_meta_chainId (int id, string name, string description, string external_link, int x, int y);
       */
       _metadataTableId = _tableland.createTable(
         address(this),
@@ -42,7 +45,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
           _tablePrefix,
           "_meta_",
           Strings.toString(block.chainid),
-          " (int id, string external_link, int x, int y);"
+          " (id int, external_link text, x int, y int);"
         )
       );
 
@@ -70,7 +73,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
           _tablePrefix,
           "_",
           Strings.toString(block.chainid),
-          " (string name, string description, string image, string external_link, string metadata, string address);"
+          " (name text, description text, image text, external_link text, metadata text, address text);"
         )
       );
 
