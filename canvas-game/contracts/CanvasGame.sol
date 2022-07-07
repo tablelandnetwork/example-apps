@@ -2,11 +2,12 @@
 pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@tableland/evm/contracts/ITablelandTables.sol";
 
-contract CanvasGame is ERC721URIStorage {
+contract CanvasGame is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
     ITablelandTables private _tableland;
@@ -21,9 +22,14 @@ contract CanvasGame is ERC721URIStorage {
     // gives you the interface to move x,y.
     string private _externalURL = "not.implemented.com";
 
-    // string private _chainId = "31337";
 
-    constructor(address registry, string chainId, string projectName, string projectDescription, string projectImage, string projectLink) ERC721("GameItem", "ITM") {
+    constructor(
+      address registry,
+      string memory projectName,
+      string memory projectDescription,
+      string memory projectImage,
+      string memory projectLink
+    ) ERC721("GameItem", "ITM") {
       _tableland = ITablelandTables(registry);
       /*
         CREATE TABLE prefix_meta_chainId (int id, string name, string description, string external_link, int x, int y);
@@ -34,7 +40,7 @@ contract CanvasGame is ERC721URIStorage {
           "create table ",
           _tablePrefix,
           "_meta_",
-          _chainId,
+          Strings.toString(block.chainid),
           " (int id, string external_link, int x, int y);"
         )
       );
@@ -42,7 +48,7 @@ contract CanvasGame is ERC721URIStorage {
       _metadataTable = string.concat(
         _tablePrefix,
         "_meta_",
-        _chainId,
+        Strings.toString(block.chainid),
         "_",
         Strings.toString(_metadataTableId)
       );
@@ -62,7 +68,7 @@ contract CanvasGame is ERC721URIStorage {
           "create table ",
           _tablePrefix,
           "_",
-          _chainId,
+          Strings.toString(block.chainid),
           " (string name, string description, string image, string external_link, string metadata, string address);"
         )
       );
@@ -70,12 +76,12 @@ contract CanvasGame is ERC721URIStorage {
       _projectTable = string.concat(
         _tablePrefix,
         "_",
-        _chainId,
+        Strings.toString(block.chainid),
         "_",
         Strings.toString(_projectTableId)
       );
 
-      metadataUri = _tableland.runSQL(
+      _tableland.runSQL(
         address(this),
         _projectTableId,
         string.concat(
@@ -87,7 +93,7 @@ contract CanvasGame is ERC721URIStorage {
           projectImage, ",",
           projectLink, ",",
           _metadataTable, ",",
-          string(address(this)),
+          _addressToString(address(this)),
           ")"
         )
       );
@@ -169,8 +175,8 @@ contract CanvasGame is ERC721URIStorage {
 
         string memory base = _baseURI();
 
-        string json_group = "";
-        string[] cols = ["id", "external_link", "x", "y"];
+        string memory json_group = "";
+        string[4] memory cols = ["id", "external_link", "x", "y"];
         for (uint i; i < cols.length; i++) {
           if (i > 0) {
             json_group = string.concat(json_group,",");
@@ -202,8 +208,8 @@ contract CanvasGame is ERC721URIStorage {
     function contractURI() public view returns (string memory) {
         string memory base = _baseURI();
 
-        string json_group = "";
-        string[] cols = ["name", "description", "image", "external_link", "metadata", "address"];
+        string memory json_group = "";
+        string[6] memory cols = ["name", "description", "image", "external_link", "metadata", "address"];
         for (uint i; i < cols.length; i++) {
           if (i > 0) {
             json_group = string.concat(json_group,",");
@@ -247,20 +253,21 @@ contract CanvasGame is ERC721URIStorage {
       );
     }
 
-
-    function setExternalURL(string calldata externalURL) external onlyOwner() {
-      _externalURL = externalURL;
-      _tableland.runSQL(
-        address(this),
-        _metadataTableId,
-        string.concat(
-          "update ",
-          _metadataTable,
-          " set external_link = ",
-          externalURL,
-          "||'?tokenId='||id", // Turns every row's URL into a URL including get param for tokenId 
-          ";"
-        )
-      );
+    function _addressToString(address x) internal pure returns (string memory) {
+      bytes memory s = new bytes(40);
+      for (uint i = 0; i < 20; i++) {
+        bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
+        bytes1 hi = bytes1(uint8(b) / 16);
+        bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+        s[2*i] = char(hi);
+        s[2*i+1] = char(lo);
+      }
+      return string(s);
     }
+
+    function char(bytes1 b) internal pure returns (bytes1 c) {
+        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
+        else return bytes1(uint8(b) + 0x57);
+    }
+
 }
