@@ -2,7 +2,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-
 describe("CanvasGame", function () {
   let accounts: SignerWithAddress[];
   let registry: any;
@@ -64,19 +63,21 @@ describe("CanvasGame", function () {
     const [, transferEvent] = receipt.events ?? [];
     const tokenId = transferEvent.args!.tokenId;
 
-    const statement = "update canvas_meta_31337_1 set x = 10 and y = 10 WHERE id = 0;";
+    const statement =
+      "update canvas_meta_31337_1 set x = 10 and y = 10 WHERE id = 0;";
 
     // TODO: this fails with `expected [] to equal []` because Array literals aren't equal
     //       I can't find a way to change the comparison logic for emit tests
-    await expect(canvasGame
-      .connect(accounts[1])
-      .makeMove(tokenId, 10, 10)
-    ).to.emit(registry, "RunSQL").withArgs(
-      canvasGame.address,
-      true,
-      1,
-      statement,
-      [ true, true, true, '', '', [], []]
-    );
+    await expect(canvasGame.connect(accounts[1]).makeMove(tokenId, 10, 10))
+      .to.emit(registry, "RunSQL")
+      .withArgs(canvasGame.address, true, 1, statement, [
+        true,
+        true,
+        true,
+        "",
+        "",
+        [],
+        [],
+      ]);
   });
 });
