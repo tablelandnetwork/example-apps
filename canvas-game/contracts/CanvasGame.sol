@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@tableland/evm/contracts/ITablelandTables.sol";
+import "@tableland/evm/contracts/utils/TablelandDeployments.sol";
 
 contract CanvasGame is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
@@ -24,13 +25,13 @@ contract CanvasGame is ERC721URIStorage, Ownable {
 
 
     constructor(
-      address registry,
       string memory projectName,
       string memory projectDescription,
       string memory projectImage,
       string memory projectLink
     ) ERC721("GameItem", "ITM") {
-      _tableland = ITablelandTables(registry);
+      // Connect to the Tableland network
+      _tableland = TablelandDeployments.get();
       /*
         CREATE TABLE prefix_meta_chainId (int id, string name, string description, string external_link, int x, int y);
       */
