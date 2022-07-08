@@ -30,7 +30,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
       */
       _tableland = ITablelandTables(registry);
       /*
-      *  CREATE TABLE prefix_meta_chainId (int id, string name, string description, string external_link, int x, int y);
+      *  CREATE TABLE prefix_chainId (int id, string name, string description, string external_link, int x, int y);
       */
       
 
@@ -39,7 +39,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
         string.concat(
           "CREATE TABLE ",
           _tablePrefix,
-          "_meta_",
+          "_",
           Strings.toString(block.chainid),
           " (id int, external_link text, x int, y int);"
         )
@@ -47,7 +47,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
 
       _metadataTable = string.concat(
         _tablePrefix,
-        "_meta_",
+        "_",
         Strings.toString(block.chainid),
         "_",
         Strings.toString(_metadataTableId)

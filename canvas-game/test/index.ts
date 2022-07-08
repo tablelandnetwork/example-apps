@@ -58,7 +58,7 @@ describe("CanvasGame", function () {
     const tokenId = transferEvent.args!.tokenId;
 
     const statement =
-      "UPDATE canvas_meta_31337_1 SET x = 10 AND y = 10 WHERE id = 0;";
+      "UPDATE canvas_31337_1 SET x = 10 AND y = 10 WHERE id = 0;";
 
     // TODO: this fails with `expected [] to equal []` because Array literals aren't equal
     //       I can't find a way to change the comparison logic for emit tests
