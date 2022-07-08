@@ -13,8 +13,6 @@ contract CanvasGame is ERC721URIStorage, Ownable {
     ITablelandTables private _tableland;
 
     string private _baseURIString = "https://testnet.tableland.network/query?s=";
-    string private _projectTable;
-    uint256 private _projectTableId;
     string private _metadataTable;
     uint256 private _metadataTableId;
     string private _tablePrefix = "canvas";
@@ -38,10 +36,12 @@ contract CanvasGame is ERC721URIStorage, Ownable {
       /*
       *  CREATE TABLE prefix_meta_chainId (int id, string name, string description, string external_link, int x, int y);
       */
+      
+
       _metadataTableId = _tableland.createTable(
         address(this),
         string.concat(
-          "create table ",
+          "CREATE TABLE ",
           _tablePrefix,
           "_meta_",
           Strings.toString(block.chainid),
@@ -56,52 +56,6 @@ contract CanvasGame is ERC721URIStorage, Ownable {
         "_",
         Strings.toString(_metadataTableId)
       );
-
-
-      /*
-      * CREATE TABLE prefix_chainId 
-      * (string name, string description, string image, string metadata, string address);
-      * 
-      * name, description, image all provided on deploy
-      * metadata created above
-      * address is this contract
-      */
-      _projectTableId = _tableland.createTable(
-        address(this),
-        string.concat(
-          "create table ",
-          _tablePrefix,
-          "_",
-          Strings.toString(block.chainid),
-          " (name text, description text, image text, external_link text, metadata text, address text);"
-        )
-      );
-
-      _projectTable = string.concat(
-        _tablePrefix,
-        "_",
-        Strings.toString(block.chainid),
-        "_",
-        Strings.toString(_projectTableId)
-      );
-
-      _tableland.runSQL(
-        address(this),
-        _projectTableId,
-        string.concat(
-          "insert into ",
-          _projectTable,
-          " (name, description, image, external_link, metadata, address) values (",
-          projectName, ",",
-          projectDescription, ",",
-          projectImage, ",",
-          projectLink, ",",
-          _metadataTable, ",",
-          _addressToString(address(this)),
-          ")"
-        )
-      );
-
     }
 
     /*
@@ -115,9 +69,9 @@ contract CanvasGame is ERC721URIStorage, Ownable {
           address(this),
           _metadataTableId,
           string.concat(
-            "insert into ",
+            "INSERT INTO ",
             _metadataTable,
-            " (id, external_link, x, y) values (",
+            " (id, external_link, x, y) VALUES (",
             Strings.toString(newItemId),
             ", '",
             _externalURL,
@@ -146,11 +100,11 @@ contract CanvasGame is ERC721URIStorage, Ownable {
         address(this),
         _metadataTableId,
         string.concat(
-          "update ",
+          "UPDATE ",
           _metadataTable,
-          " set x = ",
+          " SET x = ",
           Strings.toString(x),
-          " and y = ",
+          " AND y = ",
           Strings.toString(y),
           " WHERE id = ",
           Strings.toString(tokenId),
@@ -202,37 +156,6 @@ contract CanvasGame is ERC721URIStorage, Ownable {
           _metadataTable,
           "%20WHERE%20id%3D",
           Strings.toString(tokenId),
-          "&mode=list"
-        );
-    }
-
-    /*
-    * contractURI returns the project table metadata for the whole project
-    */
-    function contractURI() public view returns (string memory) {
-        string memory base = _baseURI();
-
-        string memory json_group = "";
-        string[6] memory cols = ["name", "description", "image", "external_link", "metadata", "address"];
-        for (uint i; i < cols.length; i++) {
-          if (i > 0) {
-            json_group = string.concat(json_group,",");
-          }
-          json_group = string.concat(
-            json_group, 
-            "'",
-            cols[i],
-            "',",
-            cols[i]
-          );
-        }
-
-        return string.concat(
-          base, 
-          "SELECT%20json_object(",
-          json_group,
-          ")%20FROM%20",
-          _projectTable,
           "&mode=list"
         );
     }
