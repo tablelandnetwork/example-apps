@@ -22,11 +22,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
 
 
     constructor(
-      address registry, 
-      string memory projectName,
-      string memory projectDescription,
-      string memory projectImage,
-      string memory projectLink
+      address registry
     ) ERC721("GameItem", "ITM") {
       /* 
       * registry if the address of the Tableland registry. You can always find those

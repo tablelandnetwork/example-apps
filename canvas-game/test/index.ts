@@ -16,13 +16,7 @@ describe("CanvasGame", function () {
     await registry.connect(accounts[0]).initialize("http://localhost:8080/");
 
     const CanvasGame = await ethers.getContractFactory("CanvasGame");
-    canvasGame = await CanvasGame.deploy(
-      registry.address,
-      "projectName",
-      "projectDescription",
-      "projectImage",
-      "projectLink"
-    );
+    canvasGame = await CanvasGame.deploy(registry.address);
     await canvasGame.deployed();
   });
 
@@ -64,7 +58,7 @@ describe("CanvasGame", function () {
     const tokenId = transferEvent.args!.tokenId;
 
     const statement =
-      "update canvas_meta_31337_1 set x = 10 and y = 10 WHERE id = 0;";
+      "UPDATE canvas_meta_31337_1 SET x = 10 AND y = 10 WHERE id = 0;";
 
     // TODO: this fails with `expected [] to equal []` because Array literals aren't equal
     //       I can't find a way to change the comparison logic for emit tests
