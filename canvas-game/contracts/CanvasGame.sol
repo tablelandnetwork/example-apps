@@ -100,7 +100,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
           _metadataTable,
           " SET x = ",
           Strings.toString(x),
-          " AND y = ",
+          ", y = ",
           Strings.toString(y),
           " WHERE id = ",
           Strings.toString(tokenId),

@@ -18,18 +18,15 @@ async function main() {
   const deployed = deployments[network.name];
   if (deployed) throw new Error(`Already deployed to ${network.name}`);
 
-  const registryAddress = (proxies as ProxyAddresses)[network.name];
+  const registryAddress =
+    network.name === "localhost" ?
+    "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" :
+    (proxies as ProxyAddresses)[network.name];
 
   if (!registryAddress) throw new Error("cannot get registry address for " + network.name);
 
   const CanvasGame = await ethers.getContractFactory("CanvasGame");
-  const canvasGame = await CanvasGame.deploy(
-    registryAddress,
-    "projectName",
-    "projectDescription",
-    "projectImage",
-    "projectLink"
-  );
+  const canvasGame = await CanvasGame.deploy(registryAddress);
   await canvasGame.deployed();
 
   console.log("deployed to:", canvasGame.address, "on", network.name);

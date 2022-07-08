@@ -20,7 +20,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 });
 
 export const deployments: {[key: string]: string} = {
-  "polygon-mumbai": "0xabD83bC4C77d8fAE7Ca5aE423F6312a40FA09b5c"
+  //"polygon-mumbai": ""
 };
 
 // You need to export an object to set up your config
