@@ -21,6 +21,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 export const deployments: {[key: string]: string} = {
   //"polygon-mumbai": ""
+  "ethereum-goerli": "0x4035ce0Df8440bd07BEf39306e4a8D785C0e13a1"
 };
 
 // You need to export an object to set up your config
