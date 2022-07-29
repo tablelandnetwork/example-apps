@@ -1,6 +1,8 @@
 import * as dotenv from "dotenv";
 
-import { HardhatUserConfig, task } from "hardhat/config";
+import { HardhatUserConfig, extendEnvironment, task } from "hardhat/config";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
@@ -121,6 +123,31 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  proxies: {
+    localhost: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+  }
 };
+
+declare module "hardhat/types/config" {
+  // eslint-disable-next-line no-unused-vars
+  interface HardhatUserConfig {
+    proxies: {
+      [key: string]: string;
+    };
+  }
+}
+
+declare module "hardhat/types/runtime" {
+  // eslint-disable-next-line no-unused-vars
+  interface HardhatRuntimeEnvironment {
+    proxy: string;
+  }
+}
+
+extendEnvironment((hre: HardhatRuntimeEnvironment) => {
+  // Get proxy address for user-selected network
+  const proxies = hre.userConfig.proxies as any;
+  hre.proxy = proxies[hre.network.name];
+});
 
 export default config;

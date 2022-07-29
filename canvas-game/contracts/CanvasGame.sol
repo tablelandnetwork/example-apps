@@ -1,41 +1,76 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@tableland/evm/contracts/ITablelandTables.sol";
 
-contract CanvasGame is ERC721URIStorage, Ownable {
+
+contract CanvasGame is
+  ERC721URIStorageUpgradeable,
+  ERC721HolderUpgradeable,
+  OwnableUpgradeable,
+  PausableUpgradeable,
+  ReentrancyGuardUpgradeable,
+  UUPSUpgradeable
+{
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
     ITablelandTables private _tableland;
 
-    string private _baseURIString = "https://testnet.tableland.network/query?s=";
+    string private _baseURIString;
     string private _metadataTable;
     uint256 private _metadataTableId;
-    string private _tablePrefix = "canvas";
+    string private _tablePrefix;
     // someday we update this with a nuxt app that diplays x,y and 
     // gives you the interface to move x,y.
-    string private _externalURL = "not.implemented.com";
+    string private _externalURL;
 
+    function initialize(string memory baseURI, string memory externalURL)
+      public
+      initializer
+    {
+      __ERC721URIStorage_init();
+      __ERC721Holder_init();
+      __Ownable_init();
+      __Pausable_init();
+      __ReentrancyGuard_init();
 
-    constructor(
-      address registry
-    ) ERC721("GameItem", "ITM") {
+      _baseURIString = baseURI;
+      _tablePrefix = "canvas";
+      _externalURL = externalURL;
+    }
+
+    function createMetadataTable(address registry)
+      external
+      payable
+      onlyOwner()
+      returns(uint256)
+    {
       /* 
       * registry if the address of the Tableland registry. You can always find those
       * here https://github.com/tablelandnetwork/evm-tableland#currently-supported-chains
       */
       _tableland = ITablelandTables(registry);
-      /*
-      *  CREATE TABLE prefix_chainId (int id, string name, string description, string external_link, int x, int y);
-      */
-      
 
       _metadataTableId = _tableland.createTable(
         address(this),
+        /*
+        *  CREATE TABLE prefix_chainId (
+        *    int id,
+        *    string name,
+        *    string description,
+        *    string external_link,
+        *    int x,
+        *    int y
+        *  );
+        */
         string.concat(
           "CREATE TABLE ",
           _tablePrefix,
@@ -45,13 +80,7 @@ contract CanvasGame is ERC721URIStorage, Ownable {
         )
       );
 
-      _metadataTable = string.concat(
-        _tablePrefix,
-        "_",
-        Strings.toString(block.chainid),
-        "_",
-        Strings.toString(_metadataTableId)
-      );
+      return _metadataTableId;
     }
 
     /*
@@ -193,4 +222,8 @@ contract CanvasGame is ERC721URIStorage, Ownable {
         else return bytes1(uint8(b) + 0x57);
     }
 
+    /**
+     * @dev See {UUPSUpgradeable-_authorizeUpgrade}.
+     */
+    function _authorizeUpgrade(address) internal view override onlyOwner {} // solhint-disable no-empty-blocks
 }

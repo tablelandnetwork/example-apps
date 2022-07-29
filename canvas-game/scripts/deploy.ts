@@ -3,10 +3,8 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { ethers, network } from "hardhat";
-import config from "../hardhat.config";
+import { ethers, upgrades, network } from "hardhat";
 import { proxies, ProxyAddresses } from "@tableland/evm/proxies";
-import { deployments } from "../hardhat.config";
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -15,8 +13,6 @@ async function main() {
   // If this script is run directly using `node` you may want to call compile
   // manually to make sure everything is compiled
   // await hre.run('compile');
-  const deployed = deployments[network.name];
-  if (deployed) throw new Error(`Already deployed to ${network.name}`);
 
   const registryAddress =
     network.name === "localhost" ?
@@ -26,10 +22,27 @@ async function main() {
   if (!registryAddress) throw new Error("cannot get registry address for " + network.name);
 
   const CanvasGame = await ethers.getContractFactory("CanvasGame");
-  const canvasGame = await CanvasGame.deploy(registryAddress);
+  const canvasGame = await upgrades.deployProxy(CanvasGame, [
+    "https://testnet.tableland.network/query?s=",
+    "not.implemented.com"
+  ], {
+    kind: "uups",
+  });
   await canvasGame.deployed();
 
-  console.log("deployed to:", canvasGame.address, "on", network.name);
+  console.log("proxy deployed to:", canvasGame.address, "on", network.name);
+
+  const impl = await upgrades.erc1967.getImplementationAddress(canvasGame.address);
+  console.log("New implementation address:", impl);
+
+  console.log("running post deploy")
+
+  const tx = await canvasGame.createMetadataTable(registryAddress);
+  const receipt = await tx.wait();
+
+  const tableId = receipt.events[0].args.tokenId;
+
+  console.log("tableId:", tableId.toString());
 }
 
 // We recommend this pattern to be able to use async/await everywhere
