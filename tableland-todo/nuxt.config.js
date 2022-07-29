@@ -1,7 +1,6 @@
 export default {
   env: {
-    validatorHost: process.env.VALIDATOR || 'https://testnet.tableland.network',
-    validatorNet: process.env.NETWORK || 'testnet'
+    tablelandChain: process.env.CHAIN || 'ethereum-goerli' // 'local-tableland'
   },
   // Disable server-side rendering: https://go.nuxtjs.dev/ssr-mode
   ssr: false,
