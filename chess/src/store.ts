@@ -186,16 +186,13 @@ export const connected = {
   subscribe: connectedSubscribe
 };
 
-
 export const init = async function (token) {
   try {
     //const connectParams: ConnectOptions = {
       //chain: 'ethereum-goerli'
     //};
     const connectParams: ConnectOptions = {
-      host: 'http://localhost:8080',
-      chain: 'custom',
-      contract: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'
+      chain: 'local-tableland'
     };
     if (token) {
       connectParams.token = {token};
@@ -205,9 +202,11 @@ export const init = async function (token) {
 
     if (!token) {
       await _tableland.siwe();
+      // TODO: this token being stored in localStorage is not the most secure approach
+      //       If you are using this as an example consider making the user sign a new
+      //       siwe token each time the page loads, or save it in a secure service of
+      //       some kind.
       localStorage.setItem('tableland.token', _tableland.token.token);
-      //const addr = await _tableland.signer.getAddress();
-      //localStorage.setItem('tableland.address', addr);
     }
 
     const decodedToken = atob(localStorage.getItem('tableland.token'));

@@ -26,11 +26,14 @@ async function main() {
     //signer: account
   //});
   const tableland = await connect({
-    host: 'http://localhost:8080',
-    chain: 'custom',
-    contract: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+    chain: "local-tableland",
     signer: account
   });
+
+  if (!(tableland.options && tableland.options.host)) {
+    throw new Error("Must have a host to set set base uri");
+  }
+  const host = tableland.options.host;
 
   const GameToken = await hre.ethers.getContractFactory("GameToken");
 
@@ -40,7 +43,7 @@ async function main() {
 
   console.log("GameToken deployed to:", gameToken.address, "By account: ", account.address);
 
-  const createTx = await tableland.create("chess_nft", `
+  const { name } = await tableland.create(`
     id int,
     name text,
     description text,
@@ -48,13 +51,15 @@ async function main() {
     external_url text,
     animation_url text,
     attributes json
-  `);
+  `, {
+    prefix: "chess_nft"
+  });
 
-  console.log("Tableland Table created: " + createTx);
+  console.log("Tableland Table created:", name);
 
   // TODO: this should be env
   // https://staging.tableland.network/query?s=select json_build_object('name', concat('#', id), 'external_url', concat('https://tableland.xyz/rigs/', id), 'image', image, 'image_alpha', image_alpha, 'attributes',  json_agg(json_build_object('display_type', display_type, 'trait_type', trait_type, 'value', value))) from test_rigs_69_5 join test_rig_attributes_69_6 on test_rigs_69_5.id = test_rig_attributes_69_6.rig_id where id = 1 group by id;&mode=list
-  gameToken.setBaseUri(`http://localhost:8080/chain/31337/tables`);
+  gameToken.setBaseUri(`${host}/chain/31337/tables`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -28,73 +28,29 @@ const go = async function () {
         //});
         const tableland = await connect({
           signer: account,
-          chain: 'custom',
-          contract: registryContractAddress,
-          host: 'http://localhost:8080'
+          chain: 'local-tableland'
         });
 
-        const tableId = await create(tableland);
-        await setController(tableId, account, account.address);
-        await burnIt(tableId, account, account.address);
+        const { tableId, name: tableName } =  await tableland.create(
+          // NOTE: move_id SERIAL will mean moves are incremented relative to all games.
+          //       To order moves for a single game the app can sort, but the number will not
+          //       be the move number for that game.  This saves us from needing more constraints,
+          //       and tracking what the move number is in the app.
+          `
+            player_address VARCHAR(100),
+            game_id VARCHAR(20),
+            move_id SERIAL,
+            move TEXT
+          `, {
+            prefix: 'chess'
+          }
+        );
+        await tableland.setController(policyContractAddress, tableName);
+        await tableland.lockController(tableName);
 
     } catch (err) {
         console.log(err);
     }
-};
-
-const setController = async function (tableId, signer, address) {
-  // Make some direct to registry sc calls
-  const registryContract = TablelandTables__factory.connect(registryContractAddress, signer);
-
-  const controllerTx = await registryContract.setController(
-    address, /* table owner address */
-    tableId,
-    policyContractAddress /* Chess contract address */
-  );
-
-  await controllerTx.wait();
-};
-
-const create = async function (tableland) {
-  const txn = await tableland.create(
-    // NOTE: move_id SERIAL will mean moves are incremented relative to all games.
-    //       To order moves for a single game the app can sort, but the number will not
-    //       be the move number for that game.  This saves us from needing more constraints,
-    //       and tracking what the move number is in the app.
-    `player_address VARCHAR(100),
-    game_id VARCHAR(20),
-    move_id SERIAL,
-    move TEXT`,
-    // prefix
-    'chess'
-  );
-
-  let receipt = await tableland.receipt(txn.txnHash);
-  let tries = 0;
-  while (!receipt && tries < 5) {
-    tries++;
-    await new Promise(resolve => setTimeout(() => resolve(), 2000));
-    receipt = await tableland.receipt(txn.txnHash);
-  }
-
-  console.log(`receipt: ${JSON.stringify(receipt, null, 4)}`);
-  const tableId = receipt && receipt.tableId;
-  if (!tableId) throw new Error('could not get table ID');
-
-  return tableId;
-};
-
-const burnIt = async function (tableId, signer, address) {
-  const registryContract = TablelandTables__factory.connect(registryContractAddress, signer);
-
-  const burnTx = await registryContract.lock(
-    address,
-    tableId,
-  );
-  //const burnTx = await registryContract.lock(tableId);
-
-  await burnTx.wait();
-
 };
 
 go();

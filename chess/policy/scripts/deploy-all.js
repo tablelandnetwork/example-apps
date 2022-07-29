@@ -18,6 +18,7 @@ const deployChess = async function (account) {
   return chess;
 };
 
+// TODO: remove this now that deploy-nft.js is it's own file
 const deployNft = async function () {
   const GameToken = await hre.ethers.getContractFactory("GameToken");
   const gameToken = await GameToken.connect(account).deploy();
