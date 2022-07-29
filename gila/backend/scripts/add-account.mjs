@@ -3,7 +3,7 @@ import { Wallet, providers } from 'ethers';
 
 const allUsersTable = 'gila_all_users_5_16';
 const network = {
-  chain: 'ethereum-goerli'
+  chain: 'ethereum-goerli' // 'local-tableland'
 };
 
 
