@@ -1,32 +1,9 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// When running the script with `npx hardhat run <script>` you'll find the Hardhat
-// Runtime Environment's members available in the global scope.
-const hre = require("hardhat");
+const { deployChessPolicy } = require("./deployments");
+
+const tokenAddress = // Add address here
 
 async function main() {
-  // Hardhat always runs the compile task when running scripts with its command
-  // line interface.
-  //
-  // If this script is run directly using `node` you may want to call compile
-  // manually to make sure everything is compiled
-  // await hre.run('compile');
-
-  // We get the contract to deploy
-  const [account0, account1] = await hre.ethers.getSigners();
-  // for active networks we need to deploy with the first account, which is specified in config
-  //const account = account0;
-  // for local dev we need to deploy with an account that is different than the one the validator is using
-  const account = account1;
-
-  const Chess = await hre.ethers.getContractFactory("Chess");
-
-  const chess = await Chess.connect(account).deploy();
-
-  await chess.deployed();
-
-  console.log("Chess deployed to:", chess.address, "By account: ", account.address);
+  await deployChessPolicy(tokenAddress);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -3,18 +3,18 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@tableland/evm/contracts/ITablelandController.sol";
-import "./GameToken.sol";
+import "./ChessToken.sol";
 
 
-interface IGameToken {
+interface IChessToken {
     function getPlayerGames(address player) external view returns (uint256[] memory);
 }
 
-contract Chess is ITablelandController {
-    IGameToken private gameToken;
+contract ChessPolicy is ITablelandController {
+    IChessToken private chessToken;
 
-    constructor(address _gameTokenAddr) {
-        gameToken = IGameToken(_gameTokenAddr);
+    constructor(address _chessTokenAddr) {
+        chessToken = IChessToken(_chessTokenAddr);
     }
 
     function getPolicy(address caller)
@@ -23,7 +23,7 @@ contract Chess is ITablelandController {
         override
         returns(ITablelandController.Policy memory)
     {
-        uint256[] memory playerGames = gameToken.getPlayerGames(caller);
+        uint256[] memory playerGames = chessToken.getPlayerGames(caller);
 
         string memory wc;
         string[] memory uc;

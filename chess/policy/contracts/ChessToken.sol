@@ -1,31 +1,121 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@tableland/evm/contracts/ITablelandTables.sol";
+import "@tableland/evm/contracts/utils/URITemplate.sol";
 
-contract GameToken is ERC721, Ownable {
+
+contract ChessToken is ERC721, ERC721Holder, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
+    ITablelandTables private _tableland;
+    uint256 private _metadataTableId = 0;
+    uint256 private _movesTableId = 0;
+    string private _baseURIString;
+    string private _metadataTable;
+    string private _movesTable;
 
-    string baseURI;
-
+    // TODO: data will be kept in tableland, but leave this to
+    //       track bounties
     struct Game {
         address player1;
         address player2;
-        bool condeded;
         address payable winner;
-        uint balance;
+        uint256 bounty;
     }
 
     mapping(uint256 => Game) private _games;
+
+    // The Policy Contract uses this information to enforce ACL
     mapping(address => uint256[]) private _playerGames;
 
-    constructor() ERC721("GameToken", "MTK") {
-        baseURI = "https://13vtpw6ppk.execute-api.us-east-1.amazonaws.com/chess-nft-metadata?game=";
+    constructor(string memory baseURI, address registry) ERC721("ChessToken", "MTK") {
+        _baseURIString = baseURI;
+        _tableland = ITablelandTables(registry);
+    }
+
+    /*
+     *  Create a table to store metadata for the Chess Token
+     */
+    function initCreateMetadata() external onlyOwner() {
+        require(_metadataTableId == 0, "Chess Token table already exists");
+
+        string memory prefix = "chess_token_";
+        _metadataTableId = _tableland.createTable(
+            address(this),
+            string.concat(
+                "CREATE TABLE ",
+                prefix,
+                Strings.toString(block.chainid),
+                " (id int,",
+                " player1 text,",
+                " player2 text,",
+                " conceeded int,",
+                " winner text,",
+                " bounty real);"
+            )
+        );
+
+        _metadataTable = string.concat(
+            prefix,
+            Strings.toString(block.chainid),
+            Strings.toString(_metadataTableId)
+        );
+    }
+
+    /*
+     *  Create a table to store the moves of the Chess games,
+     *  which are the content that makes up the chess tokens
+     */
+    function initCreateMoves() external onlyOwner() {
+        require(_movesTableId == 0, "Chess Moves table already exists");
+
+        string memory prefix = "chess_moves_";
+        _movesTableId = _tableland.createTable(
+            address(this),
+            string.concat(
+                "CREATE TABLE ",
+                prefix,
+                Strings.toString(block.chainid),
+                "(player_address TEXT,",
+                "game_id INT,",
+                "move_id INT PRIMARY KEY AUTOINCREMENT,",
+                "move TEXT);"
+            )
+        );
+
+        _movesTable = string.concat(
+            prefix,
+            Strings.toString(block.chainid),
+            Strings.toString(_movesTableId)
+        );
+    }
+
+    /*
+     *  Set the Policy Controller contract that will enforce
+     *  Tableland ACL rules for the Chess Moves Table
+     */
+    function initSetController(address policyAddress) external onlyOwner() {
+        require(_movesTableId > 0, "Chess Moves table does not exist");
+        require(
+            _tableland.getController(_movesTableId) == 0x0000000000000000000000000000000000000000,
+            "Controller already set"
+        );
+
+        _tableland.setController(address(this), _movesTableId, policyAddress);
+    }
+
+    function getMetadataTableId() public view returns(uint256) {
+        return _metadataTableId;
+    }
+
+    function getMovesTableId() public view returns(uint256) {
+        return _movesTableId;
     }
 
     /**
@@ -34,22 +124,14 @@ contract GameToken is ERC721, Ownable {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-        string memory player1 = _addressToString(_games[tokenId].player1);
-        string memory player2 = _addressToString(_games[tokenId].player2);
-        string memory tokenString = Strings.toString(tokenId);
-
-        return bytes(baseURI).length > 0 ?
-            string(
-                abi.encodePacked(
-                    baseURI,
-                    tokenString,
-                    "&white=",
-                    player1,
-                    "&black=",
-                    player2
-                )
-            ) :
-            "";
+        return string.concat(
+            _baseURI(),
+            "SELECT * FROM ",
+            _metadataTable,
+            " WHERE id = '",
+            Strings.toString(tokenId),
+            "'&mode=list"
+        );
     }
 
     function mintGame(address to, address player1, address player2)
@@ -62,17 +144,22 @@ contract GameToken is ERC721, Ownable {
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
 
+        // TODO: insert Tableland row of metadata
+
+        // We are going to leave this to track bounties
         Game storage game = _games[tokenId];
         game.player1 = player1;
         game.player2 = player2;
-        game.balance = 0;
+        game.bounty = 0;
 
+        // This is used by the Policy contract to determine if insert is allowed
         _playerGames[player1].push(tokenId);
         _playerGames[player2].push(tokenId);
 
         return tokenId;
     }
 
+    // this function can be used to get the players and bounty of a game
     function getGame(uint256 tokenId)
         public
         view
@@ -86,6 +173,7 @@ contract GameToken is ERC721, Ownable {
         return game;
     }
 
+    // this function is used by the Policy Contract to construct a Tableland Policy
     function getPlayerGames(address player) 
         public
         view
@@ -105,7 +193,7 @@ contract GameToken is ERC721, Ownable {
         require(ownerOf(tokenId) != _games[tokenId].player1, "owner is a player");
         require(ownerOf(tokenId) != _games[tokenId].player2, "owner is a player");
 
-        _games[tokenId].balance = _games[tokenId].balance + msg.value;
+        _games[tokenId].bounty = _games[tokenId].bounty + msg.value;
     }
 
     function concede(uint256 tokenId)
@@ -165,9 +253,7 @@ contract GameToken is ERC721, Ownable {
         // Loop through the existing games and put all but tokenId into the new array
         uint256 nextInsert = 0;
         for (uint256 i = 0; i < _playerGames[player].length; i++) {
-            console.log("Player Games Length", playerGames.length);
             if (_playerGames[player][i] >= 0 && _playerGames[player][i] != tokenId) {
-                console.log("I ", i);
                 // Note: push is not allowed in this context, so we manage position with `nextInsert`
                 playerGames[nextInsert] = _playerGames[player][i];
                 nextInsert++;
@@ -204,15 +290,15 @@ contract GameToken is ERC721, Ownable {
         private
     {
         require(_games[tokenId].winner != address(0), "cannot payout until there is a winner");
-        uint balance = _games[tokenId].balance;
-        _games[tokenId].balance = 0;
+        uint bounty = _games[tokenId].bounty;
+        _games[tokenId].bounty = 0;
 
-        if (balance > 0) {
+        if (bounty > 0) {
             // TODO: there is a potential security risk here if winner is a contract. Using send
             //       and transfer aren't recommended because of gas cost and changes in Istanbul
-            (bool paid, ) = _games[tokenId].winner.call{value: balance}("");
+            (bool paid, ) = _games[tokenId].winner.call{value: bounty}("");
             if (!paid) {
-                _games[tokenId].balance = balance;
+                _games[tokenId].bounty = bounty;
             }
         }
     }

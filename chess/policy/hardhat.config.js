@@ -79,5 +79,19 @@ module.exports = {
           ? [process.env.OPTIMISM_KOVAN_STAGING_PRIVATE_KEY]
           : [],
     }
+  },
+  baseURIs: {
+    // mainnets
+    ethereum: "https://tableland.network/query?s=",
+    optimism: "https://tableland.network/query?s=",
+    polygon: "https://tableland.network/query?s=",
+    // testnets
+    "ethereum-goerli": "https://testnet.tableland.network/query?s=",
+    "optimism-kovan": "https://testnet.tableland.network/query?s=",
+    "polygon-mumbai": "https://testnet.tableland.network/query?s=",
+    // devnets
+    "optimism-kovan-staging":
+      "https://staging.tableland.network/query?s=",
+    localhost: "http://localhost:8080/query?s=",
   }
 };

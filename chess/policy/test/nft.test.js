@@ -3,21 +3,36 @@ const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const { BigNumber } = require("ethers");
 
+const validatorService = "http://localhost:8080";
 describe("Chess Game NFT Contract", function () {
   let accounts;
-  let gameTokens;
+  let chessTokens;
 
   beforeEach(async function () {
     accounts = await ethers.getSigners();
-    const Factory = await ethers.getContractFactory("GameToken");
-    gameTokens = await Factory.deploy();
-    await gameTokens.deployed();
+
+    const RegistryFactory = await ethers.getContractFactory("TablelandTables");
+    const registry = await RegistryFactory.deploy();
+    await registry.deployed();
+    await registry.initialize(validatorService);
+
+    const ChessTokenFactory = await ethers.getContractFactory("ChessToken");
+    chessTokens = await ChessTokenFactory.deploy(validatorService, registry.address);
+    await chessTokens.deployed();
+    await chessTokens.initCreateMetadata();
+    await chessTokens.initCreateMoves();
+
+    const ChessPolicyFactory = await ethers.getContractFactory("ChessPolicy");
+    const chessPolicy = await ChessPolicyFactory.deploy(chessTokens.address);
+    await chessPolicy.deployed();
+
+    await chessTokens.initSetController(chessPolicy.address);
   });
 
   const getGame = async function () {
     const [account0, account1, account2] = accounts;
 
-    const tx = await gameTokens
+    const tx = await chessTokens
       .connect(account0)
       .mintGame(account0.address, account1.address, account2.address);
 
@@ -49,7 +64,7 @@ describe("Chess Game NFT Contract", function () {
 
     expect(gameId).to.equal(BigNumber.from(0));
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account1)
       .getGame(gameId);
 
@@ -60,7 +75,7 @@ describe("Chess Game NFT Contract", function () {
     // check that defaults are correct
     expect(game.conceded).to.equal(undefined);
     expect(game.winner).to.equal("0x0000000000000000000000000000000000000000");
-    expect(game.balance).to.equal(0);
+    expect(game.bounty).to.equal(0);
   });
 
   it("Should allow getting active games for a player", async function () {
@@ -69,7 +84,7 @@ describe("Chess Game NFT Contract", function () {
 
     await expect(gameId).to.equal(BigNumber.from(0));
 
-    const games = await gameTokens
+    const games = await chessTokens
       .connect(account1)
       .getPlayerGames(account1.address);
 
@@ -77,7 +92,7 @@ describe("Chess Game NFT Contract", function () {
 
     const gameId2 = await getGame();
 
-    const games2 = await gameTokens
+    const games2 = await chessTokens
       .connect(account2)
       .getPlayerGames(account2.address);
 
@@ -89,7 +104,7 @@ describe("Chess Game NFT Contract", function () {
   it("Should return empty list if no active games for a player", async function () {
     const [account0] = accounts;
 
-    const games = await gameTokens
+    const games = await chessTokens
       .connect(account0)
       .getPlayerGames(account0.address);
 
@@ -102,13 +117,13 @@ describe("Chess Game NFT Contract", function () {
 
     await expect(gameId).to.equal(BigNumber.from(0));
 
-    const winnerTx = await gameTokens
+    const winnerTx = await chessTokens
       .connect(account0)
       .setWinner(gameId, account1.address);
 
     await winnerTx.wait()
 
-    const games = await gameTokens
+    const games = await chessTokens
       .connect(account1)
       .getPlayerGames(account1.address);
 
@@ -121,7 +136,7 @@ describe("Chess Game NFT Contract", function () {
 
     expect(gameId).to.equal(BigNumber.from(0));
 
-    const bountyTx = await gameTokens
+    const bountyTx = await chessTokens
       .connect(account0)
       .setBounty(gameId, { value: ethers.utils.parseEther("2")});
 
@@ -138,11 +153,11 @@ describe("Chess Game NFT Contract", function () {
       BigNumber.from("9998000000000000000000")
     )).to.equal(true);
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account1)
       .getGame(gameId);
 
-    expect(game.balance).to.equal(ethers.utils.parseEther("2"));
+    expect(game.bounty).to.equal(ethers.utils.parseEther("2"));
   });
 
   it("Should allow owner to declare winner", async function () {
@@ -151,13 +166,13 @@ describe("Chess Game NFT Contract", function () {
 
     expect(gameId).to.equal(BigNumber.from(0));
 
-    const winnerTx = await gameTokens
+    const winnerTx = await chessTokens
       .connect(account0)
       .setWinner(gameId, account1.address);
 
     await winnerTx.wait()
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account0)
       .getGame(gameId);
 
@@ -170,13 +185,13 @@ describe("Chess Game NFT Contract", function () {
 
     await expect(gameId).to.equal(BigNumber.from(0));
 
-    const bountyTx = await gameTokens
+    const bountyTx = await chessTokens
       .connect(account0)
       .setBounty(gameId, { value: ethers.utils.parseEther("10")});
 
     await bountyTx.wait()
 
-    const winnerTx = await gameTokens
+    const winnerTx = await chessTokens
       .connect(account0)
       .setWinner(gameId, account1.address);
 
@@ -193,24 +208,24 @@ describe("Chess Game NFT Contract", function () {
       BigNumber.from("10010000000000000000000")
     )).to.equal(true);
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account1)
       .getGame(gameId);
 
-    await expect(game.balance).to.equal(ethers.utils.parseEther("0"));
+    await expect(game.bounty).to.equal(ethers.utils.parseEther("0"));
   });
 
   it("Should allow a player to concede", async function () {
     const [account0, account1, account2] = accounts;
     const gameId = await getGame();
 
-    const concedeTx = await gameTokens
+    const concedeTx = await chessTokens
       .connect(account1)
       .concede(gameId);
 
     await concedeTx.wait();
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account1)
       .getGame(gameId);
 
@@ -221,13 +236,13 @@ describe("Chess Game NFT Contract", function () {
     const [account0, account1, account2] = accounts;
     const gameId = await getGame();
 
-    const bountyTx = await gameTokens
+    const bountyTx = await chessTokens
       .connect(account0)
       .setBounty(gameId, { value: ethers.utils.parseEther("10")});
 
     await bountyTx.wait()
 
-    const concedeTx = await gameTokens
+    const concedeTx = await chessTokens
       .connect(account1)
       .concede(gameId);
 
@@ -251,23 +266,23 @@ describe("Chess Game NFT Contract", function () {
 
     await expect(gameId).to.equal(BigNumber.from(0));
 
-    const bountyTx1 = await gameTokens
+    const bountyTx1 = await chessTokens
       .connect(account0)
       .setBounty(gameId, { value: ethers.utils.parseEther("2")});
 
     await bountyTx1.wait()
 
-    const bountyTx2 = await gameTokens
+    const bountyTx2 = await chessTokens
       .connect(account3)
       .setBounty(gameId, { value: ethers.utils.parseEther("2")});
 
     await bountyTx2.wait()
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account1)
       .getGame(gameId);
 
-    await expect(game.balance).to.equal(ethers.utils.parseEther("4"));
+    await expect(game.bounty).to.equal(ethers.utils.parseEther("4"));
   });
 
   // Test what it should NOT do
@@ -279,12 +294,12 @@ describe("Chess Game NFT Contract", function () {
 
     // Cheater!!!
     await expect(
-      gameTokens
+      chessTokens
       .connect(account1)
       .setWinner(gameId, account1.address)
     ).to.be.revertedWith("sender must be owner");
 
-    const game = await gameTokens
+    const game = await chessTokens
       .connect(account0)
       .getGame(gameId);
 
@@ -295,7 +310,7 @@ describe("Chess Game NFT Contract", function () {
     const [account0, account1, account2] = accounts;
 
     await expect(
-      gameTokens
+      chessTokens
       .connect(account0)
       .mintGame(account0.address, account1.address, account1.address)
     ).to.be.revertedWith("players cannot share an address");
@@ -309,7 +324,7 @@ describe("Chess Game NFT Contract", function () {
 
     // Cheater!!!
     await expect(
-      gameTokens
+      chessTokens
       .connect(account3)
       .concede(gameId)
     ).to.be.revertedWith("sender must be a player");
@@ -318,7 +333,7 @@ describe("Chess Game NFT Contract", function () {
   it("Should not allow a bounty if the owner is a player", async function () {
     const [account0, account1, account2] = accounts;
 
-    const tx = await gameTokens
+    const tx = await chessTokens
       .connect(account0)
       .mintGame(account0.address, account1.address, account0.address);
 
@@ -331,7 +346,7 @@ describe("Chess Game NFT Contract", function () {
     // No bounty allowed if owner is a player since the
     // owner can mark themself the winner at any time
     await expect(
-      gameTokens
+      chessTokens
       .connect(account2)
       .setBounty(gameId, { value: ethers.utils.parseEther("10")})
     ).to.be.revertedWith("owner is a player");
@@ -342,7 +357,7 @@ describe("Chess Game NFT Contract", function () {
 
     // No bounty allowed if hasn't been minted
     await expect(
-      gameTokens
+      chessTokens
       .connect(account0)
       .setBounty(BigNumber.from(1), { value: ethers.utils.parseEther("10")})
     ).to.be.revertedWith("game does not exist");
@@ -354,7 +369,7 @@ describe("Chess Game NFT Contract", function () {
 
     await expect(gameId).to.equal(BigNumber.from(0));
 
-    const concedeTx = await gameTokens
+    const concedeTx = await chessTokens
       .connect(account1)
       .concede(gameId);
 
@@ -362,7 +377,7 @@ describe("Chess Game NFT Contract", function () {
 
     // No bounty allowed if hasn't been minted
     await expect(
-      gameTokens
+      chessTokens
       .connect(account0)
       .setBounty(gameId, { value: ethers.utils.parseEther("10")})
     ).to.be.revertedWith("game has ended");
@@ -373,7 +388,7 @@ describe("Chess Game NFT Contract", function () {
 
     // No bounty allowed if hasn't been minted
     await expect(
-      gameTokens
+      chessTokens
       .connect(account0)
       .concede(BigNumber.from(1))
     ).to.be.revertedWith("game does not exist");
@@ -384,7 +399,7 @@ describe("Chess Game NFT Contract", function () {
 
     // No bounty allowed if hasn't been minted
     await expect(
-      gameTokens
+      chessTokens
       .connect(account0)
       .setWinner(BigNumber.from(1), account1.address)
     ).to.be.revertedWith("game does not exist");
@@ -395,7 +410,7 @@ describe("Chess Game NFT Contract", function () {
 
     // No bounty allowed if hasn't been minted
     await expect(
-      gameTokens
+      chessTokens
       .connect(account0)
       .getGame(BigNumber.from(1))
     ).to.be.revertedWith("game does not exist");
