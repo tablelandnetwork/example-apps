@@ -1,3 +1,4 @@
+const { extendEnvironment } = require("hardhat/config");
 require("@nomiclabs/hardhat-waffle");
 const dotenv = require("dotenv");
 
@@ -95,3 +96,10 @@ module.exports = {
     localhost: "http://localhost:8080/query?s=",
   }
 };
+
+
+extendEnvironment(hre => {
+  // Get base URI for user-selected network
+  const uris = hre.userConfig.baseURIs;
+  hre.baseURI = uris[hre.network.name];
+});

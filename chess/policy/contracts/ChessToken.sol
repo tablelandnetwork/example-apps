@@ -84,7 +84,7 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
                 Strings.toString(block.chainid),
                 "(player_address TEXT,",
                 "game_id INT,",
-                "move_id INT PRIMARY KEY AUTOINCREMENT,",
+                "move_id INT PRIMARY KEY,",
                 "move TEXT);"
             )
         );
@@ -108,6 +108,7 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
         );
 
         _tableland.setController(address(this), _movesTableId, policyAddress);
+        _tableland.lockController(address(this), _movesTableId);
     }
 
     function getMetadataTableId() public view returns(uint256) {
@@ -130,7 +131,7 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
             _metadataTable,
             " WHERE id = '",
             Strings.toString(tokenId),
-            "'&mode=list"
+            "'&mode=json"
         );
     }
 
