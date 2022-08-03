@@ -1,7 +1,8 @@
 {
   "name": "hardhat-project",
   "scripts": {
-    "test": "npx hardhat compile && jest"
+    "test": "npx hardhat compile && jest",
+    "clean": "rm -rf artifacts && rm -rf cache"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.8",

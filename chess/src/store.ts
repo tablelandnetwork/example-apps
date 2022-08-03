@@ -3,9 +3,13 @@ import { tick } from 'svelte';
 import { writable, derived } from 'svelte/store';
 import type { Writable } from "svelte/store";
 import { connect, ConnectOptions } from '@tableland/sdk';
+import { chessToken } from '../evm/artifacts/contracts/ChessToken.sol/ChessToken.json';
 
 // globally unique tablename that all players use
-const CHESS_TABLENAME = 'chess_31337_2';//'chess_5_11';
+const MOVES_TABLENAME = 'chess_moves_31337_3';
+const TOKEN_CONTRACT_ADDRESS = '0x8464135c8F25Da09e49BC8782676a84730C318bC';
+const tokenAbi = chessToken.abi;
+const TOKEN_TABLENAME = 'chess_token_31337_2';
 const moveWaitDiration = 5000;
 
 // TODO: use alchemy to get the games the user owns, and the games the user is actively playing
@@ -89,7 +93,13 @@ export const moves = {
 const { subscribe: gamesSubscribe, set: setGames, update: updateGames } = writable([]);
 export const games = {
   subscribe: gamesSubscribe,
+  mintGame: async function (params) {
+    if (!_tableland) throw new Error('you must connect to Tableland before minting');
+    const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, tokenAbi, _tableland.signer);
 
+    const ownerAddress = await _tableland.singer.getAddress();
+    await tokenContract.mintGame(ownerAddress, params.player1, params.player2);
+  },
   // TODO: active games should come from alchemy via `getPlayerGames(address)`, then games stored
   //       in tableland that don't show up in those results are finished and we will want to get
   //       them from the contract via `getGame(game_id)`
@@ -256,16 +266,16 @@ const getMyColor = function (game) {
 };
 
 const sqlStatements = {
-  doMove: (gameId: string, move: string) => `INSERT INTO ${CHESS_TABLENAME} (player_address, game_id, move) VALUES ('${_address}', '${gameId}', '${move}');`,
-  myMoves: () => `SELECT * FROM ${CHESS_TABLENAME} WHERE player_address = '${_address}';`,
+  doMove: (gameId: string, move: string) => `INSERT INTO ${MOVES_TABLENAME} (player_address, game_id, move) VALUES ('${_address}', '${gameId}', '${move}');`,
+  myMoves: () => `SELECT * FROM ${MOVES_TABLENAME} WHERE player_address = '${_address}';`,
   loadGame: (game: string, black: string, white: string) => `
-    SELECT * FROM ${CHESS_TABLENAME}
+    SELECT * FROM ${MOVES_TABLENAME}
     WHERE game_id = '${game}'
       AND (player_address = '${black}' OR player_address = '${white}')
     ORDER BY move_id ASC;
   `,
   getGames: (uniqueGames: string[]) => `
-    SELECT * FROM ${CHESS_TABLENAME}
+    SELECT * FROM ${MOVES_TABLENAME}
     WHERE game_id IN ('${uniqueGames.join('\',\'')}');
   `
 };
