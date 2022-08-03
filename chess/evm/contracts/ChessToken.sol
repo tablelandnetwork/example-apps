@@ -5,23 +5,16 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@tableland/evm/contracts/ITablelandTables.sol";
 import "@tableland/evm/contracts/utils/URITemplate.sol";
-
+import "./ChessTableland.sol";
 
 contract ChessToken is ERC721, ERC721Holder, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
-    ITablelandTables private _tableland;
-    uint256 private _metadataTableId = 0;
-    uint256 private _movesTableId = 0;
     string private _baseURIString;
-    string private _metadataTable;
-    string private _movesTable;
+    TablelandData internal _tablelandData;
 
-    // TODO: data will be kept in tableland, but leave this to
-    //       track bounties
+    // data will be kept in tableland, this is used to track bounties and enable on chain ACL
     struct Game {
         address player1;
         address player2;
@@ -36,36 +29,14 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
 
     constructor(string memory baseURI, address registry) ERC721("ChessToken", "MTK") {
         _baseURIString = baseURI;
-        _tableland = ITablelandTables(registry);
+        ChessTableland._initTableland(_tablelandData, registry);
     }
 
     /*
      *  Create a table to store metadata for the Chess Token
      */
     function initCreateMetadata() external onlyOwner() {
-        require(_metadataTableId == 0, "Chess Token table already exists");
-
-        string memory prefix = "chess_token_";
-        _metadataTableId = _tableland.createTable(
-            address(this),
-            string.concat(
-                "CREATE TABLE ",
-                prefix,
-                Strings.toString(block.chainid),
-                " (id int,",
-                " player1 text,",
-                " player2 text,",
-                " conceeded int,",
-                " winner text,",
-                " bounty real);"
-            )
-        );
-
-        _metadataTable = string.concat(
-            prefix,
-            Strings.toString(block.chainid),
-            Strings.toString(_metadataTableId)
-        );
+        ChessTableland._initCreateMetadata(_tablelandData);
     }
 
     /*
@@ -73,27 +44,7 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
      *  which are the content that makes up the chess tokens
      */
     function initCreateMoves() external onlyOwner() {
-        require(_movesTableId == 0, "Chess Moves table already exists");
-
-        string memory prefix = "chess_moves_";
-        _movesTableId = _tableland.createTable(
-            address(this),
-            string.concat(
-                "CREATE TABLE ",
-                prefix,
-                Strings.toString(block.chainid),
-                "(player_address TEXT,",
-                "game_id INT,",
-                "move_id INT PRIMARY KEY,",
-                "move TEXT);"
-            )
-        );
-
-        _movesTable = string.concat(
-            prefix,
-            Strings.toString(block.chainid),
-            Strings.toString(_movesTableId)
-        );
+        ChessTableland._initCreateMoves(_tablelandData);
     }
 
     /*
@@ -101,22 +52,15 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
      *  Tableland ACL rules for the Chess Moves Table
      */
     function initSetController(address policyAddress) external onlyOwner() {
-        require(_movesTableId > 0, "Chess Moves table does not exist");
-        require(
-            _tableland.getController(_movesTableId) == 0x0000000000000000000000000000000000000000,
-            "Controller already set"
-        );
-
-        _tableland.setController(address(this), _movesTableId, policyAddress);
-        _tableland.lockController(address(this), _movesTableId);
+        ChessTableland._initSetController(_tablelandData, policyAddress);
     }
 
     function getMetadataTableId() public view returns(uint256) {
-        return _metadataTableId;
+        return _tablelandData._metadataTableId;
     }
 
     function getMovesTableId() public view returns(uint256) {
-        return _movesTableId;
+        return _tablelandData._movesTableId;
     }
 
     /**
@@ -125,14 +69,7 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-        return string.concat(
-            _baseURI(),
-            "SELECT * FROM ",
-            _metadataTable,
-            " WHERE id = '",
-            Strings.toString(tokenId),
-            "'&mode=json"
-        );
+        return ChessTableland._getMetadataURI(_tablelandData, tokenId, _baseURI());
     }
 
     function mintGame(address to, address player1, address player2)
@@ -145,8 +82,6 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
 
-        // TODO: insert Tableland row of metadata
-
         // We are going to leave this to track bounties
         Game storage game = _games[tokenId];
         game.player1 = player1;
@@ -156,6 +91,9 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
         // This is used by the Policy contract to determine if insert is allowed
         _playerGames[player1].push(tokenId);
         _playerGames[player2].push(tokenId);
+
+        // insert Tableland row of metadata
+        ChessTableland._insertGame(_tablelandData, tokenId, player1, player2);
 
         return tokenId;
     }
@@ -195,6 +133,8 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
         require(ownerOf(tokenId) != _games[tokenId].player2, "owner is a player");
 
         _games[tokenId].bounty = _games[tokenId].bounty + msg.value;
+
+        ChessTableland._setBounty(_tablelandData, tokenId, _games[tokenId].bounty);
     }
 
     function concede(uint256 tokenId)
@@ -216,6 +156,8 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
             _games[tokenId].winner = payable(_games[tokenId].player1);
             _payWinner(tokenId);
         }
+
+        ChessTableland._concede(_tablelandData, tokenId, _games[tokenId].winner);
     }
 
     function setWinner(uint256 tokenId, address payable winner)
@@ -236,6 +178,8 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
         _deactivatePlayerGame(tokenId, _games[tokenId].player2);
 
         _payWinner(tokenId);
+
+        ChessTableland._setWinner(_tablelandData, tokenId, _games[tokenId].winner);
     }
 
     // Remove the `tokenId` game from this player's list of games
@@ -302,23 +246,6 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
                 _games[tokenId].bounty = bounty;
             }
         }
-    }
-
-    function _addressToString(address x) internal pure returns (string memory) {
-        bytes memory s = new bytes(40);
-        for (uint i = 0; i < 20; i++) {
-            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
-            bytes1 hi = bytes1(uint8(b) / 16);
-            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
-            s[2*i] = char(hi);
-            s[2*i+1] = char(lo);
-        }
-        return string(s);
-    }
-
-    function char(bytes1 b) internal pure returns (bytes1 c) {
-        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
-        else return bytes1(uint8(b) + 0x57);
     }
 
 }

@@ -2,31 +2,17 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const { BigNumber } = require("ethers");
+const { deployAll } = require("./util");
 
-const validatorService = "http://localhost:8080";
 describe("Chess Game NFT Contract", function () {
   let accounts;
   let chessTokens;
 
   beforeEach(async function () {
+    const contracts = await deployAll();
+
+    chessTokens = contracts.chessTokens;
     accounts = await ethers.getSigners();
-
-    const RegistryFactory = await ethers.getContractFactory("TablelandTables");
-    const registry = await RegistryFactory.deploy();
-    await registry.deployed();
-    await registry.initialize(validatorService);
-
-    const ChessTokenFactory = await ethers.getContractFactory("ChessToken");
-    chessTokens = await ChessTokenFactory.deploy(validatorService, registry.address);
-    await chessTokens.deployed();
-    await chessTokens.initCreateMetadata();
-    await chessTokens.initCreateMoves();
-
-    const ChessPolicyFactory = await ethers.getContractFactory("ChessPolicy");
-    const chessPolicy = await ChessPolicyFactory.deploy(chessTokens.address);
-    await chessPolicy.deployed();
-
-    await chessTokens.initSetController(chessPolicy.address);
   });
 
   const getGame = async function () {

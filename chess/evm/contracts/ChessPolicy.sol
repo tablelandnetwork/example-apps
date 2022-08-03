@@ -28,6 +28,19 @@ contract ChessPolicy is ITablelandController {
         string memory wc;
         string[] memory uc;
 
+        // If they are not a player in a game they have no access
+        if (playerGames.length == 0) {
+            return ITablelandController.Policy({
+                allowInsert: false,
+                allowUpdate: false,
+                allowDelete: false,
+                whereClause: wc,
+                withCheck: wc,
+                updatableColumns: uc
+            });
+        }
+
+        // if they are a player they can only insert rows with game_id equal to one of there games
         return ITablelandController.Policy({
             allowInsert: true,
             allowUpdate: false,

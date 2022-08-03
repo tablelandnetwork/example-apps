@@ -9,7 +9,20 @@ const deploy = async function () {
   const [account0, account1] = await hre.ethers.getSigners();
   const account = network.name === "localhost" ? account1 : account0;
 
-  const ChessToken = await hre.ethers.getContractFactory("ChessToken");
+  // To reduce contract size we leverage a library for all Tablaland interactions
+  // NOTE: is your contract is small enough you wouldn't need to use this approach
+  const ChessTablelandLib = await hre.ethers.getContractFactory("ChessTableland");
+  const chessTablelandLib = await ChessTablelandLib.connect(account).deploy();
+  await chessTablelandLib.deployed();
+
+  const ChessToken = await hre.ethers.getContractFactory("ChessToken", {
+    libraries: {
+      // Pass in library deployment address
+      // NOTE: if we are deploying to a public chain (not localhost) we
+      //       could use the address of an already deployed library
+      ChessTableland: chessTablelandLib.address
+    }
+  });
   const chessToken = await ChessToken.connect(account).deploy(baseURI, registryAddress);
   await chessToken.deployed();
   await chessToken.initCreateMetadata();

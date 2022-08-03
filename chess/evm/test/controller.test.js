@@ -1,8 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { BigNumber } = require("ethers");
+const { deployAll, getGame } = require("./util");
 
-const validatorService = "http://localhost:8080";
 describe("Chess", function () {
   let accounts;
   let registry;
@@ -11,48 +10,20 @@ describe("Chess", function () {
   let movesTableId;
 
   beforeEach(async function () {
+    const contracts = await deployAll();
+
     accounts = await ethers.getSigners();
 
-    const RegistryFactory = await ethers.getContractFactory("TablelandTables");
-    registry = await RegistryFactory.deploy();
-    await registry.deployed();
-    await registry.initialize(validatorService);
-
-    const ChessTokenFactory = await ethers.getContractFactory("ChessToken");
-    chessTokens = await ChessTokenFactory.deploy(validatorService, registry.address);
-    await chessTokens.deployed();
-    await chessTokens.initCreateMetadata();
-    await chessTokens.initCreateMoves();
-
-    const ChessPolicyFactory = await ethers.getContractFactory("ChessPolicy");
-    chessPolicy = await ChessPolicyFactory.deploy(chessTokens.address);
-    await chessPolicy.deployed();
-
-    await chessTokens.initSetController(chessPolicy.address);
-
+    registry = contracts.registry;
+    chessTokens = contracts.chessTokens;
+    chessPolicy = contracts.chessPolicy;
     movesTableId = await chessTokens.getMovesTableId();
   });
 
-  const getGame = async function () {
-    const [account0, account1, account2] = accounts;
-
-    const tx = await chessTokens
-      .connect(account0)
-      .mintGame(account0.address, account1.address, account2.address);
-
-    const receipt = await tx.wait();
-    const [transferEvent] = receipt.events ?? [];
-    const gameId = transferEvent.args.tokenId;
-
-    expect(gameId instanceof BigNumber).to.equal(true);
-
-    return gameId;
-  };
-
   it("Should return a policy for the caller", async function () {
     const account = accounts[1];
-    const gameId1 = await getGame();
-    const gameId2 = await getGame();
+    const gameId1 = await getGame(chessTokens, accounts);
+    const gameId2 = await getGame(chessTokens, accounts);
 
     const runTx = await registry.connect(account).runSQL(account.address, movesTableId, 'write query');
     // TODO: look in event to see if policy is correct?
@@ -74,8 +45,8 @@ describe("Chess", function () {
 
   it("Should change policy based on caller active games", async function () {
     const [account0, account1] = accounts;
-    const gameId1 = await getGame();
-    const gameId2 = await getGame();
+    const gameId1 = await getGame(chessTokens, accounts);
+    const gameId2 = await getGame(chessTokens, accounts);
 
     const runTx1 = await registry.connect(account1).runSQL(account1.address, movesTableId, 'write query');
     const runReceipt1 = await runTx1.wait();
@@ -114,6 +85,22 @@ describe("Chess", function () {
     expect(policy2[4]).to.equal("");
     expect(Array.isArray(policy2[5])).to.equal(true);
     expect(policy2[5].length).to.equal(0);
+  });
+
+  it("Should not allow inserting into game unless caller is a player", async function () {
+    const account4 = accounts[3];
+    const gameId = await getGame(chessTokens, accounts);
+
+    const runTx1 = await registry.connect(account4).runSQL(account4.address, movesTableId, 'write query');
+    const runReceipt1 = await runTx1.wait();
+    const [runEvent1] = runReceipt1.events ?? [];
+
+    const policy1 = runEvent1.args.policy;
+
+    // Make sure the insert is not allowed since account 4 is not a player
+    expect(policy1[0]).to.equal(false);
+    expect(policy1[1]).to.equal(false);
+    expect(policy1[2]).to.equal(false);
   });
 
 });
