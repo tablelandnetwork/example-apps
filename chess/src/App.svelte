@@ -246,6 +246,17 @@
     this.blackCanCastleShort = params.blackCanCastleShort || true
   };
 
+  Board.prototype.reset = function () {
+    this.pieceSpace = getInitialState(),
+    this.history = [],
+    this.turn = 'white',
+    this.palyerInCheck = false,
+    this.whiteCanCastleLong = true,
+    this.whiteCanCastleShort = true,
+    this.blackCanCastleLong = true,
+    this.blackCanCastleShort = true
+  };
+
   Board.prototype.doMove = function (piece, from, to, promoted) {
     const color = this.getPieceColor(piece);
     const pieceName = this.getPieceName(piece);
@@ -702,33 +713,35 @@
     Modal,
     ModalBody,
     ModalActions,
-    Radio
+    Radio,
+    Spinner
   } from '@specialdoom/proi-ui';
   // The store is custom which means svelte will inject all exports as a variable with a `$` prefix
   import {
     alerts,
     audience,
+    blackAddress,
     connected,
     gameId,
     games,
+    ownedGames,
     init,
     moves,
     myAddress,
-    myColor
+    myColor,
+    whiteAddress
   } from './store';
-
-  onMount(function () {
-    const token = localStorage.getItem('tableland.token');
-    if (token) connect();
-  });
 
   const gameBoard = new Board();
 
   const connect = async function () {
-    // do lookup here so that this function can be an event listener and called directly without worrying about arity
-    const token = localStorage.getItem('tableland.token');
-
     moves.subscribe(async mvs => {
+      if (mvs.length === 0) {
+        gameBoard.reset();
+        trigger();
+        return;
+      }
+
       for (let i = Number(gameBoard.history.length); i < mvs.length; i++) {
         const moveStr = mvs[i];
         const parts = moveStr.split(':');
@@ -749,50 +762,71 @@
       }
     });
 
-    await init(token);
+    await init();
     await games.findGames();
   };
 
+  const loadGame = async function (game) {
+    newGame = false;
+    await games.loadGame(game.id, game.player2, game.player1);
+  };
+  const unloadGame = function () {
+    games.unloadGame();
+  }
+
   const logout = function () {
-    localStorage.setItem('tableland.token', '');
     location.reload();
   };
 
-  let newOpponentAddress = '';
-  let newGameId = '';
-  $: validChallenge = function () {
+  let newPlayer1Address = '';
+  let newPlayer2Address = '';
+  let minting = false;
+
+  $: validMint = function () {
     try {
       // make sure the wallet address is valid
-      newOpponentAddress = utils.getAddress(newOpponentAddress)
+      newPlayer1Address = utils.getAddress(newPlayer1Address);
+      newPlayer2Address = utils.getAddress(newPlayer2Address);
     } catch (err) {
       return false;
     }
 
-    // make sure game id is valid
-    const gameId = newGameId && newGameId.trim()
-    if (!gameId || gameId.length > 20) return false;
-
-    // make sure they chose what color piece to play
-    if (colorChoice !== 'black' && colorChoice !== 'white') return false;
-
     return true;
   };
-  const challenge = function () {
-    if (!validChallenge()) return;
+  const mint = async function () {
+    if (!validMint()) return;
 
-    const params = new URLSearchParams();
-    params.set('black', colorChoice === 'black' ? $myAddress : newOpponentAddress);
-    params.set('white', colorChoice === 'white' ? $myAddress : newOpponentAddress);
-    params.set('game', newGameId);
+    minting = true;
+    try {
+      const gameId = await games.mintGame({
+        player1: newPlayer1Address,
+        player2: newPlayer2Address
+      });
 
-    newOpponentAddress = '';
-    newGameId = '';
+      // if there is no gameId something went wrong
+      if (!gameId) {
+        minting = false;
+        return;
+      }
 
-    challengeAlert = `${location.pathname}?${params.toString()}`;
+      newGame = {
+        id: gameId.toNumber(),
+        player1: newPlayer1Address.toString(),
+        player2: newPlayer2Address.toString()
+      };
+
+      newPlayer1Address = '';
+      newPlayer2Address = '';
+    } catch (err) {
+      minting = false;
+      console.log(err);
+    }
+    minting = false;
   };
 
-  let challengeAlert;
-  let colorChoice;
+  let newGame;
+
+  // vars for promoting pawns that make the backline
   let showPromoteModal = false;
   let promoteColor;
 
@@ -982,16 +1016,16 @@
 
 <main class="relative">
 
-  {#if challengeAlert}
-  <Modal bind:visible={challengeAlert} title="Challenge!">
+  {#if newGame}
+  <Modal bind:visible={newGame} title="Your Game has been minted!">
 
     <ModalBody>
       Here's the link to
-      <a href="{challengeAlert}" class="hover:underline text-blue-300 text-ellipsis overflow-hidden">
+      <span on:click="{() => loadGame(newGame)}" class="cursor-pointer hover:underline text-blue-300 text-ellipsis overflow-hidden">
         your game
-      </a>.
-      You can share this with the opponent who controls the Wallet Address you specified and start playing!
-      Once you make your first move the game will be visible in your list of games
+      </span>.
+      Share this with the the Wallets of the players you specified.
+      You can now set a bounty on the game, which will be paid in full to the winner.
     </ModalBody>
 
   </Modal>
@@ -1053,9 +1087,9 @@
     <div class="mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold">
       <div class="col-span-5">
 
-        <a href="?" class="hover:underline text-blue-300">Tableland Chess</a>
+        <span on:click="{unloadGame}" class="cursor-pointer hover:underline text-blue-300">Tableland Chess</span>
 
-        {#if $gameId}
+        {#if typeof $gameId === 'number'}
 
           Game ID: {$gameId} -
 
@@ -1085,6 +1119,8 @@
             <span class="text-red">{winner} is the Winner!</span>
           </h3>
           {/if}
+          <p class="text-sm">White: {$whiteAddress}</p>
+          <p class="text-sm">Black: {$blackAddress}</p>
 
         {/if}
       </div>
@@ -1107,31 +1143,58 @@
   {#if $connected}
   <div class="flex items-start mt-8">
 
-    {#if !$gameId}
-    <div class="w-96 pl-8">
+    {#if typeof $gameId !== 'number'}
+    <div class="w-1/2 px-8 overflow-wrap">
+
+      <p class="font-bold">Games you are playing</p>
       {#if $games.length}
-      <p class="font-bold">Your Games</p>
       {#each $games as game}
-        <a href="{game.link}" class="pl-4 hover:underline text-blue-300">{game.game_id}</a>
-        <br />
+      <p class="w-full border border-solid-bottom border-gray-300"></p>
+      <p class="truncate">
+        Game ID: <span on:click="{loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
+      </p>
+      <p class="truncate">Player 1: {game.player1}</p>
+      <p class="truncate">Player 2: {game.player2}</p>
       {/each}
       {/if}
+      <p class="w-full border border-solid-bottom border-gray-300"></p>
+
+      <p class="font-bold">Games you own</p>
+      {#if $ownedGames.length}
+      {#each $ownedGames as ownedGame}
+      <p class="w-full border border-solid-bottom border-gray-300"></p>
+      <p class="truncate">
+        Game ID:
+        <span on:click="{loadGame(ownedGame)}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+          {ownedGame.id}
+        </span>
+      </p>
+      <p class="truncate">Game Bounty: {ownedGame.bounty}</p>
+      <p class="truncate">Player 1: {ownedGame.player1}</p>
+      <p class="truncate">Player 2: {ownedGame.player2}</p>
+      <p class="truncate">Winner: {ownedGame.winner}</p>
+      {/each}
+      {/if}
+      <p class="w-full border border-solid-bottom border-gray-300"></p>
     </div>
 
-    <div class="w-96">
-      Challenge someone!
-      <Input label="Opponent Address" bind:value="{newOpponentAddress}" />
-      <Input label="Game Id" bind:value="{newGameId}" placeholder="max 20 characters" />
-      <label class="block">Play as:</label>
-      {#each ['black', 'white'] as option}
-        <Radio value={option} bind:group={colorChoice}>{option}</Radio>
-        <br />
-      {/each}
-      <Button type="primary" on:click="{challenge}" disabled="{!validChallenge()}">Challenge</Button>
+    <div class="w-1/2 px-8">
+      Mint a game
+      <Input label="Player 1 Address" bind:value="{newPlayer1Address}" />
+      <Input label="Player 2 Address" bind:value="{newPlayer2Address}" />
+
+      {#if minting}
+        <Spinner label="Minting..." />
+      {/if}
+      {#if !minting}
+      <Button type="primary" on:click="{mint}" disabled="{!validMint()}">
+        Mint
+      </Button>
+      {/if}
     </div>
     {/if}
 
-    {#if $gameId}
+    {#if typeof $gameId === 'number'}
     <div class="chessboard">
 
       {#each pieceSpace as row, rowIndex}
