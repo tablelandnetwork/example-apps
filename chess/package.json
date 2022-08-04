@@ -12,10 +12,11 @@
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
     "@rollup/plugin-typescript": "^8.0.0",
-    "@tableland/evm": "^2.0.2",
-    "@tableland/sdk": "^2.0.2",
+    "@tableland/evm": "^2.0.3",
+    "@tableland/sdk": "^3.0.0",
     "@tsconfig/svelte": "^2.0.0",
     "autoprefixer": "^10.4.7",
     "concurrently": "^7.2.1",
