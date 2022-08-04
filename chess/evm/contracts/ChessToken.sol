@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@tableland/evm/contracts/utils/URITemplate.sol";
 import "./ChessTableland.sol";
 
-contract ChessToken is ERC721, ERC721Holder, Ownable {
+contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
     string private _baseURIString;
@@ -35,15 +35,13 @@ contract ChessToken is ERC721, ERC721Holder, Ownable {
     /*
      *  Create a table to store metadata for the Chess Token
      */
-    function initCreateMetadata() external onlyOwner() {
+    function initCreate() external onlyOwner() {
         ChessTableland._initCreateMetadata(_tablelandData);
-    }
 
-    /*
-     *  Create a table to store the moves of the Chess games,
-     *  which are the content that makes up the chess tokens
-     */
-    function initCreateMoves() external onlyOwner() {
+        /*
+         *  Create a table to store the moves of the Chess games,
+         *  which are the content that makes up the chess tokens
+         */
         ChessTableland._initCreateMoves(_tablelandData);
     }
 

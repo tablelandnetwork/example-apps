@@ -62,7 +62,6 @@ library ChessTableland {
                 Strings.toString(block.chainid),
                 "(player_address TEXT,",
                 "game_id INT,",
-                "move_id INT PRIMARY KEY,",
                 "move TEXT);"
             )
         );
