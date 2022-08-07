@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 import { tick } from 'svelte';
 import { writable, derived } from 'svelte/store';
 import type { Writable } from "svelte/store";
@@ -133,6 +133,27 @@ export const games = {
       alerts.addAlert(err.message, 'error');
     }
   },
+  addBounty: async function (game, amount) {
+    try {
+      if (!_tableland) throw new Error('you must connect to Tableland before minting');
+
+      const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, tokenAbi, _tableland.signer);
+
+      const tx = await tokenContract.setBounty(
+        BigNumber.from(game.id),
+        {
+          value: ethers.utils.parseEther(amount)
+        }
+      );
+      const receipt = await tx.wait();
+
+      // TODO: This is a naive way of resync the UI's state with the table and chain state
+      await games.findGames();
+    } catch (err) {
+      console.log(err);
+      alerts.addAlert(err.message, 'error');
+    }
+  },
   // TODO: active games should come from alchemy via `getPlayerGames(address)`, then games stored
   //       in tableland that don't show up in those results are finished and we will want to get
   //       them from the contract via `getGame(game_id)`
@@ -231,9 +252,9 @@ export const games = {
     }
   },
   loadGame: async function (loadGameId, black, white) {
-    if (typeof loadGameId === 'string') loadGameId = parseInt(loadGameId, 10);
     try {
       if (!_tableland) throw new Error('you must connect to Tableland before playing');
+      if (typeof loadGameId === 'string') loadGameId = parseInt(loadGameId, 10);
 
       // reset the moves so UI can update
       setMoves([]);

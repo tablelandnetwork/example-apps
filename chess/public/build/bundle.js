@@ -53858,6 +53858,23 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
                 alerts.addAlert(err.message, 'error');
             }
         },
+        addBounty: async function (game, amount) {
+            try {
+                if (!_tableland)
+                    throw new Error('you must connect to Tableland before minting');
+                const tokenContract = new Contract(TOKEN_CONTRACT_ADDRESS, tokenAbi, _tableland.signer);
+                const tx = await tokenContract.setBounty(BigNumber.from(game.id), {
+                    value: parseEther(amount)
+                });
+                const receipt = await tx.wait();
+                // TODO: This is a naive way of resync the UI's state with the table and chain state
+                await games.findGames();
+            }
+            catch (err) {
+                console.log(err);
+                alerts.addAlert(err.message, 'error');
+            }
+        },
         // TODO: active games should come from alchemy via `getPlayerGames(address)`, then games stored
         //       in tableland that don't show up in those results are finished and we will want to get
         //       them from the contract via `getGame(game_id)`
@@ -53942,11 +53959,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
             }
         },
         loadGame: async function (loadGameId, black, white) {
-            if (typeof loadGameId === 'string')
-                loadGameId = parseInt(loadGameId, 10);
             try {
                 if (!_tableland)
                     throw new Error('you must connect to Tableland before playing');
+                if (typeof loadGameId === 'string')
+                    loadGameId = parseInt(loadGameId, 10);
                 // reset the moves so UI can update
                 setMoves([]);
                 moves.unlistenForMoves();
@@ -54062,68 +54079,68 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[52] = list[i];
-    	child_ctx[54] = i;
+    	child_ctx[60] = list[i];
+    	child_ctx[62] = i;
     	return child_ctx;
     }
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[52] = list[i];
-    	child_ctx[54] = i;
+    	child_ctx[60] = list[i];
+    	child_ctx[62] = i;
     	return child_ctx;
     }
 
     function get_each_context_2(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[56] = list[i];
-    	child_ctx[58] = i;
+    	child_ctx[64] = list[i];
+    	child_ctx[66] = i;
     	return child_ctx;
     }
 
     function get_each_context_3(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[59] = list[i];
-    	child_ctx[61] = i;
+    	child_ctx[67] = list[i];
+    	child_ctx[69] = i;
     	return child_ctx;
     }
 
     function get_each_context_4(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[62] = list[i];
+    	child_ctx[70] = list[i];
     	return child_ctx;
     }
 
     function get_each_context_5(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[65] = list[i];
+    	child_ctx[73] = list[i];
     	return child_ctx;
     }
 
     function get_each_context_6(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[68] = list[i];
+    	child_ctx[76] = list[i];
     	return child_ctx;
     }
 
-    // (943:2) {#if newGame}
-    function create_if_block_22(ctx) {
+    // (957:2) {#if newGame}
+    function create_if_block_25(ctx) {
     	let modal;
     	let updating_visible;
     	let current;
 
     	function modal_visible_binding(value) {
-    		/*modal_visible_binding*/ ctx[30](value);
+    		/*modal_visible_binding*/ ctx[35](value);
     	}
 
     	let modal_props = {
     		title: "Your Game has been minted!",
-    		$$slots: { default: [create_default_slot_4] },
+    		$$slots: { default: [create_default_slot_7] },
     		$$scope: { ctx }
     	};
 
-    	if (/*newGame*/ ctx[3] !== void 0) {
-    		modal_props.visible = /*newGame*/ ctx[3];
+    	if (/*newGame*/ ctx[4] !== void 0) {
+    		modal_props.visible = /*newGame*/ ctx[4];
     	}
 
     	modal = new Modal({ props: modal_props, $$inline: true });
@@ -54140,13 +54157,187 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		p: function update(ctx, dirty) {
     			const modal_changes = {};
 
-    			if (dirty[0] & /*newGame*/ 8 | dirty[2] & /*$$scope*/ 512) {
+    			if (dirty[0] & /*newGame*/ 16 | dirty[2] & /*$$scope*/ 131072) {
     				modal_changes.$$scope = { dirty, ctx };
     			}
 
-    			if (!updating_visible && dirty[0] & /*newGame*/ 8) {
+    			if (!updating_visible && dirty[0] & /*newGame*/ 16) {
     				updating_visible = true;
-    				modal_changes.visible = /*newGame*/ ctx[3];
+    				modal_changes.visible = /*newGame*/ ctx[4];
+    				add_flush_callback(() => updating_visible = false);
+    			}
+
+    			modal.$set(modal_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(modal.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(modal.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(modal, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_25.name,
+    		type: "if",
+    		source: "(957:2) {#if newGame}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (960:4) <ModalBody>
+    function create_default_slot_8(ctx) {
+    	let t0;
+    	let span;
+    	let t2;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			t0 = text$1("Here's the link to\n      ");
+    			span = element("span");
+    			span.textContent = "your game\n      ";
+    			t2 = text$1(".\n      Share this with the the Wallets of the players you specified.\n      You can now set a bounty on the game, which will be paid in full to the winner.");
+    			attr_dev(span, "class", "cursor-pointer hover:underline text-blue-300 text-ellipsis overflow-hidden");
+    			add_location(span, file, 961, 6, 33369);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t0, anchor);
+    			insert_dev(target, span, anchor);
+    			insert_dev(target, t2, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(span, "click", /*click_handler*/ ctx[34], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t0);
+    			if (detaching) detach_dev(span);
+    			if (detaching) detach_dev(t2);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_8.name,
+    		type: "slot",
+    		source: "(960:4) <ModalBody>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (958:2) <Modal bind:visible={newGame} title="Your Game has been minted!">
+    function create_default_slot_7(ctx) {
+    	let modalbody;
+    	let current;
+
+    	modalbody = new ModalBody({
+    			props: {
+    				$$slots: { default: [create_default_slot_8] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(modalbody.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(modalbody, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const modalbody_changes = {};
+
+    			if (dirty[0] & /*newGame*/ 16 | dirty[2] & /*$$scope*/ 131072) {
+    				modalbody_changes.$$scope = { dirty, ctx };
+    			}
+
+    			modalbody.$set(modalbody_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(modalbody.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(modalbody.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(modalbody, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_7.name,
+    		type: "slot",
+    		source: "(958:2) <Modal bind:visible={newGame} title=\\\"Your Game has been minted!\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (972:2) {#if bountyGame}
+    function create_if_block_22(ctx) {
+    	let modal;
+    	let updating_visible;
+    	let current;
+
+    	function modal_visible_binding_1(value) {
+    		/*modal_visible_binding_1*/ ctx[37](value);
+    	}
+
+    	let modal_props = {
+    		title: "Add to the bounty",
+    		$$slots: { default: [create_default_slot_4] },
+    		$$scope: { ctx }
+    	};
+
+    	if (/*bountyGame*/ ctx[5] !== void 0) {
+    		modal_props.visible = /*bountyGame*/ ctx[5];
+    	}
+
+    	modal = new Modal({ props: modal_props, $$inline: true });
+    	binding_callbacks.push(() => bind(modal, 'visible', modal_visible_binding_1));
+
+    	const block = {
+    		c: function create() {
+    			create_component(modal.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(modal, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const modal_changes = {};
+
+    			if (dirty[0] & /*validBounty, settingBounty, newBounty*/ 32836 | dirty[2] & /*$$scope*/ 131072) {
+    				modal_changes.$$scope = { dirty, ctx };
+    			}
+
+    			if (!updating_visible && dirty[0] & /*bountyGame*/ 32) {
+    				updating_visible = true;
+    				modal_changes.visible = /*bountyGame*/ ctx[5];
     				add_flush_callback(() => updating_visible = false);
     			}
 
@@ -54170,47 +54361,283 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_22.name,
     		type: "if",
-    		source: "(943:2) {#if newGame}",
+    		source: "(972:2) {#if bountyGame}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (946:4) <ModalBody>
-    function create_default_slot_5(ctx) {
-    	let t0;
-    	let span;
-    	let t2;
-    	let mounted;
-    	let dispose;
+    // (982:10) {#if settingBounty}
+    function create_if_block_24(ctx) {
+    	let spinner;
+    	let current;
+
+    	spinner = new Spinner({
+    			props: { label: "Adding..." },
+    			$$inline: true
+    		});
 
     	const block = {
     		c: function create() {
-    			t0 = text$1("Here's the link to\n      ");
-    			span = element("span");
-    			span.textContent = "your game\n      ";
-    			t2 = text$1(".\n      Share this with the the Wallets of the players you specified.\n      You can now set a bounty on the game, which will be paid in full to the winner.");
-    			attr_dev(span, "class", "cursor-pointer hover:underline text-blue-300 text-ellipsis overflow-hidden");
-    			add_location(span, file, 947, 6, 33029);
+    			create_component(spinner.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(spinner, target, anchor);
+    			current = true;
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(spinner.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(spinner.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(spinner, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_24.name,
+    		type: "if",
+    		source: "(982:10) {#if settingBounty}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (986:10) {#if !settingBounty}
+    function create_if_block_23(ctx) {
+    	let button;
+    	let current;
+
+    	button = new Button({
+    			props: {
+    				type: "primary",
+    				small: true,
+    				disabled: !/*validBounty*/ ctx[15](),
+    				$$slots: { default: [create_default_slot_6] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	button.$on("click", /*addBounty*/ ctx[31]);
+
+    	const block = {
+    		c: function create() {
+    			create_component(button.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(button, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const button_changes = {};
+    			if (dirty[0] & /*validBounty*/ 32768) button_changes.disabled = !/*validBounty*/ ctx[15]();
+
+    			if (dirty[2] & /*$$scope*/ 131072) {
+    				button_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button.$set(button_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(button.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(button.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(button, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_23.name,
+    		type: "if",
+    		source: "(986:10) {#if !settingBounty}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (987:10) <Button type="primary" small on:click="{addBounty}" disabled="{!validBounty()}">
+    function create_default_slot_6(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text$1("Submit");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_6.name,
+    		type: "slot",
+    		source: "(987:10) <Button type=\\\"primary\\\" small on:click=\\\"{addBounty}\\\" disabled=\\\"{!validBounty()}\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (975:4) <ModalBody>
+    function create_default_slot_5(ctx) {
+    	let t0;
+    	let div2;
+    	let div0;
+    	let input;
+    	let updating_value;
+    	let t1;
+    	let div1;
+    	let t2;
+    	let t3;
+    	let current;
+
+    	function input_value_binding(value) {
+    		/*input_value_binding*/ ctx[36](value);
+    	}
+
+    	let input_props = {
+    		placeholder: "value in ETH",
+    		type: "number",
+    		className: "false"
+    	};
+
+    	if (/*newBounty*/ ctx[2] !== void 0) {
+    		input_props.value = /*newBounty*/ ctx[2];
+    	}
+
+    	input = new Input({ props: input_props, $$inline: true });
+    	binding_callbacks.push(() => bind(input, 'value', input_value_binding));
+    	let if_block0 = /*settingBounty*/ ctx[6] && create_if_block_24(ctx);
+    	let if_block1 = !/*settingBounty*/ ctx[6] && create_if_block_23(ctx);
+
+    	const block = {
+    		c: function create() {
+    			t0 = text$1("Add to the bounty for this game\n      ");
+    			div2 = element("div");
+    			div0 = element("div");
+    			create_component(input.$$.fragment);
+    			t1 = space();
+    			div1 = element("div");
+    			if (if_block0) if_block0.c();
+    			t2 = space();
+    			if (if_block1) if_block1.c();
+    			t3 = text$1("\n\n      The bounty is paid in full, minus gas, to the winner of the game.\n      Note the winner must be set on chain by the token owner, it is not automatically assigned by this client app.");
+    			attr_dev(div0, "class", "col-span-2");
+    			add_location(div0, file, 977, 8, 33902);
+    			attr_dev(div1, "class", "align-middle");
+    			add_location(div1, file, 980, 8, 34054);
+    			attr_dev(div2, "class", "grid grid-cols-3");
+    			add_location(div2, file, 976, 6, 33863);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, t0, anchor);
-    			insert_dev(target, span, anchor);
-    			insert_dev(target, t2, anchor);
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, div0);
+    			mount_component(input, div0, null);
+    			append_dev(div2, t1);
+    			append_dev(div2, div1);
+    			if (if_block0) if_block0.m(div1, null);
+    			append_dev(div1, t2);
+    			if (if_block1) if_block1.m(div1, null);
+    			insert_dev(target, t3, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const input_changes = {};
 
-    			if (!mounted) {
-    				dispose = listen_dev(span, "click", /*click_handler*/ ctx[29], false, false, false);
-    				mounted = true;
+    			if (!updating_value && dirty[0] & /*newBounty*/ 4) {
+    				updating_value = true;
+    				input_changes.value = /*newBounty*/ ctx[2];
+    				add_flush_callback(() => updating_value = false);
+    			}
+
+    			input.$set(input_changes);
+
+    			if (/*settingBounty*/ ctx[6]) {
+    				if (if_block0) {
+    					if (dirty[0] & /*settingBounty*/ 64) {
+    						transition_in(if_block0, 1);
+    					}
+    				} else {
+    					if_block0 = create_if_block_24(ctx);
+    					if_block0.c();
+    					transition_in(if_block0, 1);
+    					if_block0.m(div1, t2);
+    				}
+    			} else if (if_block0) {
+    				group_outros();
+
+    				transition_out(if_block0, 1, 1, () => {
+    					if_block0 = null;
+    				});
+
+    				check_outros();
+    			}
+
+    			if (!/*settingBounty*/ ctx[6]) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+
+    					if (dirty[0] & /*settingBounty*/ 64) {
+    						transition_in(if_block1, 1);
+    					}
+    				} else {
+    					if_block1 = create_if_block_23(ctx);
+    					if_block1.c();
+    					transition_in(if_block1, 1);
+    					if_block1.m(div1, null);
+    				}
+    			} else if (if_block1) {
+    				group_outros();
+
+    				transition_out(if_block1, 1, 1, () => {
+    					if_block1 = null;
+    				});
+
+    				check_outros();
     			}
     		},
-    		p: noop,
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(input.$$.fragment, local);
+    			transition_in(if_block0);
+    			transition_in(if_block1);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(input.$$.fragment, local);
+    			transition_out(if_block0);
+    			transition_out(if_block1);
+    			current = false;
+    		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t0);
-    			if (detaching) detach_dev(span);
-    			if (detaching) detach_dev(t2);
-    			mounted = false;
-    			dispose();
+    			if (detaching) detach_dev(div2);
+    			destroy_component(input);
+    			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
+    			if (detaching) detach_dev(t3);
     		}
     	};
 
@@ -54218,14 +54645,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_default_slot_5.name,
     		type: "slot",
-    		source: "(946:4) <ModalBody>",
+    		source: "(975:4) <ModalBody>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (944:2) <Modal bind:visible={newGame} title="Your Game has been minted!">
+    // (973:2) <Modal bind:visible={bountyGame} title="Add to the bounty">
     function create_default_slot_4(ctx) {
     	let modalbody;
     	let current;
@@ -54249,7 +54676,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		p: function update(ctx, dirty) {
     			const modalbody_changes = {};
 
-    			if (dirty[0] & /*newGame*/ 8 | dirty[2] & /*$$scope*/ 512) {
+    			if (dirty[0] & /*validBounty, settingBounty, newBounty*/ 32836 | dirty[2] & /*$$scope*/ 131072) {
     				modalbody_changes.$$scope = { dirty, ctx };
     			}
 
@@ -54273,14 +54700,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_default_slot_4.name,
     		type: "slot",
-    		source: "(944:2) <Modal bind:visible={newGame} title=\\\"Your Game has been minted!\\\">",
+    		source: "(973:2) <Modal bind:visible={bountyGame} title=\\\"Add to the bounty\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (962:8) {#if promoteColor === 'black'}
+    // (1005:8) {#if promoteColor === 'black'}
     function create_if_block_21(ctx) {
     	let div0;
     	let t1;
@@ -54306,13 +54733,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			div3 = element("div");
     			div3.textContent = "queen ♛";
     			attr_dev(div0, "class", "cursor-pointer px-4");
-    			add_location(div0, file, 962, 8, 33537);
+    			add_location(div0, file, 1005, 8, 34756);
     			attr_dev(div1, "class", "cursor-pointer px-4");
-    			add_location(div1, file, 966, 8, 33670);
+    			add_location(div1, file, 1009, 8, 34889);
     			attr_dev(div2, "class", "cursor-pointer px-4");
-    			add_location(div2, file, 970, 8, 33807);
+    			add_location(div2, file, 1013, 8, 35026);
     			attr_dev(div3, "class", "cursor-pointer px-4");
-    			add_location(div3, file, 974, 8, 33944);
+    			add_location(div3, file, 1017, 8, 35163);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -54325,10 +54752,10 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(div0, "click", /*click_handler_1*/ ctx[31], false, false, false),
-    					listen_dev(div1, "click", /*click_handler_2*/ ctx[32], false, false, false),
-    					listen_dev(div2, "click", /*click_handler_3*/ ctx[33], false, false, false),
-    					listen_dev(div3, "click", /*click_handler_4*/ ctx[34], false, false, false)
+    					listen_dev(div0, "click", /*click_handler_1*/ ctx[38], false, false, false),
+    					listen_dev(div1, "click", /*click_handler_2*/ ctx[39], false, false, false),
+    					listen_dev(div2, "click", /*click_handler_3*/ ctx[40], false, false, false),
+    					listen_dev(div3, "click", /*click_handler_4*/ ctx[41], false, false, false)
     				];
 
     				mounted = true;
@@ -54352,14 +54779,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_21.name,
     		type: "if",
-    		source: "(962:8) {#if promoteColor === 'black'}",
+    		source: "(1005:8) {#if promoteColor === 'black'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (980:8) {#if promoteColor === 'white'}
+    // (1023:8) {#if promoteColor === 'white'}
     function create_if_block_20(ctx) {
     	let div0;
     	let t1;
@@ -54385,13 +54812,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			div3 = element("div");
     			div3.textContent = "queen ♕";
     			attr_dev(div0, "class", "cursor-pointer px-4");
-    			add_location(div0, file, 980, 8, 34132);
+    			add_location(div0, file, 1023, 8, 35351);
     			attr_dev(div1, "class", "cursor-pointer px-4");
-    			add_location(div1, file, 984, 8, 34265);
+    			add_location(div1, file, 1027, 8, 35484);
     			attr_dev(div2, "class", "cursor-pointer px-4");
-    			add_location(div2, file, 988, 8, 34402);
+    			add_location(div2, file, 1031, 8, 35621);
     			attr_dev(div3, "class", "cursor-pointer px-4");
-    			add_location(div3, file, 992, 8, 34539);
+    			add_location(div3, file, 1035, 8, 35758);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -54404,10 +54831,10 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(div0, "click", /*click_handler_5*/ ctx[35], false, false, false),
-    					listen_dev(div1, "click", /*click_handler_6*/ ctx[36], false, false, false),
-    					listen_dev(div2, "click", /*click_handler_7*/ ctx[37], false, false, false),
-    					listen_dev(div3, "click", /*click_handler_8*/ ctx[38], false, false, false)
+    					listen_dev(div0, "click", /*click_handler_5*/ ctx[42], false, false, false),
+    					listen_dev(div1, "click", /*click_handler_6*/ ctx[43], false, false, false),
+    					listen_dev(div2, "click", /*click_handler_7*/ ctx[44], false, false, false),
+    					listen_dev(div3, "click", /*click_handler_8*/ ctx[45], false, false, false)
     				];
 
     				mounted = true;
@@ -54431,19 +54858,19 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_20.name,
     		type: "if",
-    		source: "(980:8) {#if promoteColor === 'white'}",
+    		source: "(1023:8) {#if promoteColor === 'white'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (960:4) <ModalBody>
+    // (1003:4) <ModalBody>
     function create_default_slot_3(ctx) {
     	let div;
     	let t;
-    	let if_block0 = /*promoteColor*/ ctx[5] === 'black' && create_if_block_21(ctx);
-    	let if_block1 = /*promoteColor*/ ctx[5] === 'white' && create_if_block_20(ctx);
+    	let if_block0 = /*promoteColor*/ ctx[8] === 'black' && create_if_block_21(ctx);
+    	let if_block1 = /*promoteColor*/ ctx[8] === 'white' && create_if_block_20(ctx);
 
     	const block = {
     		c: function create() {
@@ -54452,7 +54879,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t = space();
     			if (if_block1) if_block1.c();
     			attr_dev(div, "class", "flex");
-    			add_location(div, file, 960, 6, 33471);
+    			add_location(div, file, 1003, 6, 34690);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -54461,7 +54888,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			if (if_block1) if_block1.m(div, null);
     		},
     		p: function update(ctx, dirty) {
-    			if (/*promoteColor*/ ctx[5] === 'black') {
+    			if (/*promoteColor*/ ctx[8] === 'black') {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
     				} else {
@@ -54474,7 +54901,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block0 = null;
     			}
 
-    			if (/*promoteColor*/ ctx[5] === 'white') {
+    			if (/*promoteColor*/ ctx[8] === 'white') {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
@@ -54498,14 +54925,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_default_slot_3.name,
     		type: "slot",
-    		source: "(960:4) <ModalBody>",
+    		source: "(1003:4) <ModalBody>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (958:2) <Modal bind:visible={showPromoteModal} title="Choose Promotion">
+    // (1001:2) <Modal bind:visible={showPromoteModal} title="Choose Promotion">
     function create_default_slot_2(ctx) {
     	let modalbody;
     	let current;
@@ -54529,7 +54956,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		p: function update(ctx, dirty) {
     			const modalbody_changes = {};
 
-    			if (dirty[0] & /*promoteColor*/ 32 | dirty[2] & /*$$scope*/ 512) {
+    			if (dirty[0] & /*promoteColor*/ 256 | dirty[2] & /*$$scope*/ 131072) {
     				modalbody_changes.$$scope = { dirty, ctx };
     			}
 
@@ -54553,16 +54980,16 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_default_slot_2.name,
     		type: "slot",
-    		source: "(958:2) <Modal bind:visible={showPromoteModal} title=\\\"Choose Promotion\\\">",
+    		source: "(1001:2) <Modal bind:visible={showPromoteModal} title=\\\"Choose Promotion\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1006:6) <Alert type="{alert.type}">
+    // (1049:6) <Alert type="{alert.type}">
     function create_default_slot_1(ctx) {
-    	let t_value = /*alert*/ ctx[68].message + "";
+    	let t_value = /*alert*/ ctx[76].message + "";
     	let t;
 
     	const block = {
@@ -54573,7 +55000,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, t, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$alerts*/ 8192 && t_value !== (t_value = /*alert*/ ctx[68].message + "")) set_data_dev(t, t_value);
+    			if (dirty[0] & /*$alerts*/ 131072 && t_value !== (t_value = /*alert*/ ctx[76].message + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t);
@@ -54584,14 +55011,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_default_slot_1.name,
     		type: "slot",
-    		source: "(1006:6) <Alert type=\\\"{alert.type}\\\">",
+    		source: "(1049:6) <Alert type=\\\"{alert.type}\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1004:4) {#each $alerts as alert}
+    // (1047:4) {#each $alerts as alert}
     function create_each_block_6(ctx) {
     	let div;
     	let alert;
@@ -54602,7 +55029,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     	alert = new Alert({
     			props: {
-    				type: /*alert*/ ctx[68].type,
+    				type: /*alert*/ ctx[76].type,
     				$$slots: { default: [create_default_slot_1] },
     				$$scope: { ctx }
     			},
@@ -54615,7 +55042,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			create_component(alert.$$.fragment);
     			t = space();
     			attr_dev(div, "class", "cursor-pointer");
-    			add_location(div, file, 1004, 4, 34793);
+    			add_location(div, file, 1047, 4, 36012);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -54628,7 +55055,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     					div,
     					"click",
     					function () {
-    						if (is_function(alerts.clearAlert(/*alert*/ ctx[68]))) alerts.clearAlert(/*alert*/ ctx[68]).apply(this, arguments);
+    						if (is_function(alerts.clearAlert(/*alert*/ ctx[76]))) alerts.clearAlert(/*alert*/ ctx[76]).apply(this, arguments);
     					},
     					false,
     					false,
@@ -54641,9 +55068,9 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		p: function update(new_ctx, dirty) {
     			ctx = new_ctx;
     			const alert_changes = {};
-    			if (dirty[0] & /*$alerts*/ 8192) alert_changes.type = /*alert*/ ctx[68].type;
+    			if (dirty[0] & /*$alerts*/ 131072) alert_changes.type = /*alert*/ ctx[76].type;
 
-    			if (dirty[0] & /*$alerts*/ 8192 | dirty[2] & /*$$scope*/ 512) {
+    			if (dirty[0] & /*$alerts*/ 131072 | dirty[2] & /*$$scope*/ 131072) {
     				alert_changes.$$scope = { dirty, ctx };
     			}
 
@@ -54670,14 +55097,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block_6.name,
     		type: "each",
-    		source: "(1004:4) {#each $alerts as alert}",
+    		source: "(1047:4) {#each $alerts as alert}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1016:8) {#if typeof $gameId === 'number'}
+    // (1059:8) {#if typeof $gameId === 'number'}
     function create_if_block_12(ctx) {
     	let t0;
     	let t1;
@@ -54691,13 +55118,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	let p1;
     	let t8;
     	let t9;
-    	let if_block0 = !/*winner*/ ctx[6] && create_if_block_14(ctx);
-    	let if_block1 = /*winner*/ ctx[6] && create_if_block_13(ctx);
+    	let if_block0 = !/*winner*/ ctx[9] && create_if_block_14(ctx);
+    	let if_block1 = /*winner*/ ctx[9] && create_if_block_13(ctx);
 
     	const block = {
     		c: function create() {
     			t0 = text$1("Game ID: ");
-    			t1 = text$1(/*$gameId*/ ctx[14]);
+    			t1 = text$1(/*$gameId*/ ctx[18]);
     			t2 = text$1(" -\n\n          ");
     			if (if_block0) if_block0.c();
     			t3 = space();
@@ -54705,15 +55132,15 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t4 = space();
     			p0 = element("p");
     			t5 = text$1("White: ");
-    			t6 = text$1(/*$whiteAddress*/ ctx[16]);
+    			t6 = text$1(/*$whiteAddress*/ ctx[20]);
     			t7 = space();
     			p1 = element("p");
     			t8 = text$1("Black: ");
-    			t9 = text$1(/*$blackAddress*/ ctx[17]);
+    			t9 = text$1(/*$blackAddress*/ ctx[21]);
     			attr_dev(p0, "class", "text-sm");
-    			add_location(p0, file, 1045, 10, 36010);
+    			add_location(p0, file, 1088, 10, 37229);
     			attr_dev(p1, "class", "text-sm");
-    			add_location(p1, file, 1046, 10, 36066);
+    			add_location(p1, file, 1089, 10, 37285);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, t0, anchor);
@@ -54732,9 +55159,9 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(p1, t9);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$gameId*/ 16384) set_data_dev(t1, /*$gameId*/ ctx[14]);
+    			if (dirty[0] & /*$gameId*/ 262144) set_data_dev(t1, /*$gameId*/ ctx[18]);
 
-    			if (!/*winner*/ ctx[6]) {
+    			if (!/*winner*/ ctx[9]) {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
     				} else {
@@ -54747,7 +55174,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block0 = null;
     			}
 
-    			if (/*winner*/ ctx[6]) {
+    			if (/*winner*/ ctx[9]) {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
@@ -54760,8 +55187,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block1 = null;
     			}
 
-    			if (dirty[0] & /*$whiteAddress*/ 65536) set_data_dev(t6, /*$whiteAddress*/ ctx[16]);
-    			if (dirty[0] & /*$blackAddress*/ 131072) set_data_dev(t9, /*$blackAddress*/ ctx[17]);
+    			if (dirty[0] & /*$whiteAddress*/ 1048576) set_data_dev(t6, /*$whiteAddress*/ ctx[20]);
+    			if (dirty[0] & /*$blackAddress*/ 2097152) set_data_dev(t9, /*$blackAddress*/ ctx[21]);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t0);
@@ -54781,19 +55208,19 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_12.name,
     		type: "if",
-    		source: "(1016:8) {#if typeof $gameId === 'number'}",
+    		source: "(1059:8) {#if typeof $gameId === 'number'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1020:10) {#if !winner}
+    // (1063:10) {#if !winner}
     function create_if_block_14(ctx) {
     	let t;
     	let if_block1_anchor;
-    	let if_block0 = /*$audience*/ ctx[15] && create_if_block_19(ctx);
-    	let if_block1 = !/*$audience*/ ctx[15] && create_if_block_15(ctx);
+    	let if_block0 = /*$audience*/ ctx[19] && create_if_block_19(ctx);
+    	let if_block1 = !/*$audience*/ ctx[19] && create_if_block_15(ctx);
 
     	const block = {
     		c: function create() {
@@ -54809,7 +55236,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, if_block1_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (/*$audience*/ ctx[15]) {
+    			if (/*$audience*/ ctx[19]) {
     				if (if_block0) ; else {
     					if_block0 = create_if_block_19(ctx);
     					if_block0.c();
@@ -54820,7 +55247,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block0 = null;
     			}
 
-    			if (!/*$audience*/ ctx[15]) {
+    			if (!/*$audience*/ ctx[19]) {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
@@ -54845,14 +55272,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_14.name,
     		type: "if",
-    		source: "(1020:10) {#if !winner}",
+    		source: "(1063:10) {#if !winner}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1022:12) {#if $audience}
+    // (1065:12) {#if $audience}
     function create_if_block_19(ctx) {
     	let p;
 
@@ -54861,7 +55288,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			p = element("p");
     			p.textContent = "You are in the audience, if this is by mistake try loging out and reconnecting";
     			attr_dev(p, "class", "text-sm");
-    			add_location(p, file, 1022, 12, 35355);
+    			add_location(p, file, 1065, 12, 36574);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -54875,21 +55302,21 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_19.name,
     		type: "if",
-    		source: "(1022:12) {#if $audience}",
+    		source: "(1065:12) {#if $audience}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1026:12) {#if !$audience}
+    // (1069:12) {#if !$audience}
     function create_if_block_15(ctx) {
     	let t0;
     	let t1;
     	let if_block2_anchor;
-    	let if_block0 = /*turn*/ ctx[9] === /*$myColor*/ ctx[12] && create_if_block_18(ctx);
-    	let if_block1 = /*turn*/ ctx[9] !== /*$myColor*/ ctx[12] && create_if_block_17(ctx);
-    	let if_block2 = /*palyerInCheck*/ ctx[10] && create_if_block_16(ctx);
+    	let if_block0 = /*turn*/ ctx[12] === /*$myColor*/ ctx[16] && create_if_block_18(ctx);
+    	let if_block1 = /*turn*/ ctx[12] !== /*$myColor*/ ctx[16] && create_if_block_17(ctx);
+    	let if_block2 = /*palyerInCheck*/ ctx[13] && create_if_block_16(ctx);
 
     	const block = {
     		c: function create() {
@@ -54909,7 +55336,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, if_block2_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (/*turn*/ ctx[9] === /*$myColor*/ ctx[12]) {
+    			if (/*turn*/ ctx[12] === /*$myColor*/ ctx[16]) {
     				if (if_block0) ; else {
     					if_block0 = create_if_block_18(ctx);
     					if_block0.c();
@@ -54920,7 +55347,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block0 = null;
     			}
 
-    			if (/*turn*/ ctx[9] !== /*$myColor*/ ctx[12]) {
+    			if (/*turn*/ ctx[12] !== /*$myColor*/ ctx[16]) {
     				if (if_block1) ; else {
     					if_block1 = create_if_block_17(ctx);
     					if_block1.c();
@@ -54931,7 +55358,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block1 = null;
     			}
 
-    			if (/*palyerInCheck*/ ctx[10]) {
+    			if (/*palyerInCheck*/ ctx[13]) {
     				if (if_block2) {
     					if_block2.p(ctx, dirty);
     				} else {
@@ -54958,14 +55385,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_15.name,
     		type: "if",
-    		source: "(1026:12) {#if !$audience}",
+    		source: "(1069:12) {#if !$audience}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1027:14) {#if  turn === $myColor}
+    // (1070:14) {#if  turn === $myColor}
     function create_if_block_18(ctx) {
     	let b;
 
@@ -54973,7 +55400,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		c: function create() {
     			b = element("b");
     			b.textContent = "Your Turn";
-    			add_location(b, file, 1027, 14, 35558);
+    			add_location(b, file, 1070, 14, 36777);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, b, anchor);
@@ -54987,14 +55414,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_18.name,
     		type: "if",
-    		source: "(1027:14) {#if  turn === $myColor}",
+    		source: "(1070:14) {#if  turn === $myColor}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1030:14) {#if  turn !== $myColor}
+    // (1073:14) {#if  turn !== $myColor}
     function create_if_block_17(ctx) {
     	let b;
 
@@ -55002,7 +55429,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		c: function create() {
     			b = element("b");
     			b.textContent = "Opponent's Turn";
-    			add_location(b, file, 1030, 14, 35648);
+    			add_location(b, file, 1073, 14, 36867);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, b, anchor);
@@ -55016,14 +55443,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_17.name,
     		type: "if",
-    		source: "(1030:14) {#if  turn !== $myColor}",
+    		source: "(1073:14) {#if  turn !== $myColor}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1033:14) {#if palyerInCheck}
+    // (1076:14) {#if palyerInCheck}
     function create_if_block_16(ctx) {
     	let span;
     	let t0;
@@ -55032,10 +55459,10 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	const block = {
     		c: function create() {
     			span = element("span");
-    			t0 = text$1(/*turn*/ ctx[9]);
+    			t0 = text$1(/*turn*/ ctx[12]);
     			t1 = text$1(" in check!");
     			attr_dev(span, "class", "text-red svelte-1gmu9nd");
-    			add_location(span, file, 1033, 14, 35739);
+    			add_location(span, file, 1076, 14, 36958);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -55043,7 +55470,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(span, t1);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*turn*/ 512) set_data_dev(t0, /*turn*/ ctx[9]);
+    			if (dirty[0] & /*turn*/ 4096) set_data_dev(t0, /*turn*/ ctx[12]);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(span);
@@ -55054,14 +55481,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_16.name,
     		type: "if",
-    		source: "(1033:14) {#if palyerInCheck}",
+    		source: "(1076:14) {#if palyerInCheck}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1040:10) {#if winner}
+    // (1083:10) {#if winner}
     function create_if_block_13(ctx) {
     	let h3;
     	let t0;
@@ -55074,11 +55501,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			h3 = element("h3");
     			t0 = text$1("Game Over\n            ");
     			span = element("span");
-    			t1 = text$1(/*winner*/ ctx[6]);
+    			t1 = text$1(/*winner*/ ctx[9]);
     			t2 = text$1(" is the Winner!");
     			attr_dev(span, "class", "text-red svelte-1gmu9nd");
-    			add_location(span, file, 1042, 12, 35914);
-    			add_location(h3, file, 1040, 10, 35875);
+    			add_location(span, file, 1085, 12, 37133);
+    			add_location(h3, file, 1083, 10, 37094);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, h3, anchor);
@@ -55088,7 +55515,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(span, t2);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*winner*/ 64) set_data_dev(t1, /*winner*/ ctx[6]);
+    			if (dirty[0] & /*winner*/ 512) set_data_dev(t1, /*winner*/ ctx[9]);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(h3);
@@ -55099,22 +55526,22 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_13.name,
     		type: "if",
-    		source: "(1040:10) {#if winner}",
+    		source: "(1083:10) {#if winner}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1051:6) {#if $myAddress}
+    // (1094:6) {#if $myAddress}
     function create_if_block_11(ctx) {
     	let div;
     	let t0;
     	let b;
-    	let t1_value = /*$myAddress*/ ctx[18].slice(0, 5) + "";
+    	let t1_value = /*$myAddress*/ ctx[22].slice(0, 5) + "";
     	let t1;
     	let t2;
-    	let t3_value = /*$myAddress*/ ctx[18].slice(-5) + "";
+    	let t3_value = /*$myAddress*/ ctx[22].slice(-5) + "";
     	let t3;
     	let t4;
     	let span;
@@ -55132,11 +55559,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t4 = space();
     			span = element("span");
     			span.textContent = "logout";
-    			add_location(b, file, 1052, 23, 36226);
+    			add_location(b, file, 1095, 23, 37445);
     			attr_dev(span, "class", "hover:underline cursor-pointer text-blue-300");
-    			add_location(span, file, 1053, 8, 36291);
+    			add_location(span, file, 1096, 8, 37510);
     			attr_dev(div, "class", "text-sm text-center");
-    			add_location(div, file, 1051, 6, 36169);
+    			add_location(div, file, 1094, 6, 37388);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -55149,13 +55576,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(div, span);
 
     			if (!mounted) {
-    				dispose = listen_dev(span, "click", /*logout*/ ctx[25], false, false, false);
+    				dispose = listen_dev(span, "click", /*logout*/ ctx[29], false, false, false);
     				mounted = true;
     			}
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$myAddress*/ 262144 && t1_value !== (t1_value = /*$myAddress*/ ctx[18].slice(0, 5) + "")) set_data_dev(t1, t1_value);
-    			if (dirty[0] & /*$myAddress*/ 262144 && t3_value !== (t3_value = /*$myAddress*/ ctx[18].slice(-5) + "")) set_data_dev(t3, t3_value);
+    			if (dirty[0] & /*$myAddress*/ 4194304 && t1_value !== (t1_value = /*$myAddress*/ ctx[22].slice(0, 5) + "")) set_data_dev(t1, t1_value);
+    			if (dirty[0] & /*$myAddress*/ 4194304 && t3_value !== (t3_value = /*$myAddress*/ ctx[22].slice(-5) + "")) set_data_dev(t3, t3_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(div);
@@ -55168,14 +55595,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_11.name,
     		type: "if",
-    		source: "(1051:6) {#if $myAddress}",
+    		source: "(1094:6) {#if $myAddress}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1061:2) {#if !$connected}
+    // (1104:2) {#if !$connected}
     function create_if_block_10(ctx) {
     	let div;
     	let button;
@@ -55189,16 +55616,16 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			button.textContent = "Connect To Tableland";
     			attr_dev(button, "type", "button");
     			attr_dev(button, "class", "btn btn-connect cursor-pointer svelte-1gmu9nd");
-    			add_location(button, file, 1062, 4, 36492);
+    			add_location(button, file, 1105, 4, 37711);
     			attr_dev(div, "class", "container-center svelte-1gmu9nd");
-    			add_location(div, file, 1061, 2, 36457);
+    			add_location(div, file, 1104, 2, 37676);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
     			append_dev(div, button);
 
     			if (!mounted) {
-    				dispose = listen_dev(button, "click", /*connect*/ ctx[22], false, false, false);
+    				dispose = listen_dev(button, "click", /*connect*/ ctx[26], false, false, false);
     				mounted = true;
     			}
     		},
@@ -55214,20 +55641,20 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_10.name,
     		type: "if",
-    		source: "(1061:2) {#if !$connected}",
+    		source: "(1104:2) {#if !$connected}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1067:2) {#if $connected}
+    // (1110:2) {#if $connected}
     function create_if_block(ctx) {
     	let div;
     	let t;
     	let current;
-    	let if_block0 = typeof /*$gameId*/ ctx[14] !== 'number' && create_if_block_5(ctx);
-    	let if_block1 = typeof /*$gameId*/ ctx[14] === 'number' && create_if_block_1(ctx);
+    	let if_block0 = typeof /*$gameId*/ ctx[18] !== 'number' && create_if_block_5(ctx);
+    	let if_block1 = typeof /*$gameId*/ ctx[18] === 'number' && create_if_block_1(ctx);
 
     	const block = {
     		c: function create() {
@@ -55236,7 +55663,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t = space();
     			if (if_block1) if_block1.c();
     			attr_dev(div, "class", "flex items-start mt-8");
-    			add_location(div, file, 1067, 2, 36643);
+    			add_location(div, file, 1110, 2, 37862);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -55246,11 +55673,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			current = true;
     		},
     		p: function update(ctx, dirty) {
-    			if (typeof /*$gameId*/ ctx[14] !== 'number') {
+    			if (typeof /*$gameId*/ ctx[18] !== 'number') {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
 
-    					if (dirty[0] & /*$gameId*/ 16384) {
+    					if (dirty[0] & /*$gameId*/ 262144) {
     						transition_in(if_block0, 1);
     					}
     				} else {
@@ -55269,7 +55696,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				check_outros();
     			}
 
-    			if (typeof /*$gameId*/ ctx[14] === 'number') {
+    			if (typeof /*$gameId*/ ctx[18] === 'number') {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
@@ -55302,14 +55729,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block.name,
     		type: "if",
-    		source: "(1067:2) {#if $connected}",
+    		source: "(1110:2) {#if $connected}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1070:4) {#if typeof $gameId !== 'number'}
+    // (1113:4) {#if typeof $gameId !== 'number'}
     function create_if_block_5(ctx) {
     	let div0;
     	let p0;
@@ -55332,11 +55759,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	let t10;
     	let t11;
     	let current;
-    	let if_block0 = /*$games*/ ctx[20].length && create_if_block_9(ctx);
-    	let if_block1 = /*$ownedGames*/ ctx[21].length && create_if_block_8(ctx);
+    	let if_block0 = /*$games*/ ctx[24].length && create_if_block_9(ctx);
+    	let if_block1 = /*$ownedGames*/ ctx[25].length && create_if_block_8(ctx);
 
     	function input0_value_binding(value) {
-    		/*input0_value_binding*/ ctx[40](value);
+    		/*input0_value_binding*/ ctx[48](value);
     	}
 
     	let input0_props = { label: "Player 1 Address" };
@@ -55349,7 +55776,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	binding_callbacks.push(() => bind(input0, 'value', input0_value_binding));
 
     	function input1_value_binding(value) {
-    		/*input1_value_binding*/ ctx[41](value);
+    		/*input1_value_binding*/ ctx[49](value);
     	}
 
     	let input1_props = { label: "Player 2 Address" };
@@ -55360,8 +55787,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     	input1 = new Input({ props: input1_props, $$inline: true });
     	binding_callbacks.push(() => bind(input1, 'value', input1_value_binding));
-    	let if_block2 = /*minting*/ ctx[2] && create_if_block_7(ctx);
-    	let if_block3 = !/*minting*/ ctx[2] && create_if_block_6(ctx);
+    	let if_block2 = /*minting*/ ctx[3] && create_if_block_7(ctx);
+    	let if_block3 = !/*minting*/ ctx[3] && create_if_block_6(ctx);
 
     	const block = {
     		c: function create() {
@@ -55390,17 +55817,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t11 = space();
     			if (if_block3) if_block3.c();
     			attr_dev(p0, "class", "font-bold");
-    			add_location(p0, file, 1072, 6, 36768);
+    			add_location(p0, file, 1115, 6, 37987);
     			attr_dev(p1, "class", "w-full border border-solid-bottom border-gray-300");
-    			add_location(p1, file, 1083, 6, 37248);
+    			add_location(p1, file, 1127, 6, 38543);
     			attr_dev(p2, "class", "font-bold");
-    			add_location(p2, file, 1085, 6, 37321);
+    			add_location(p2, file, 1129, 6, 38616);
     			attr_dev(p3, "class", "w-full border border-solid-bottom border-gray-300");
-    			add_location(p3, file, 1101, 6, 37975);
+    			add_location(p3, file, 1150, 6, 39457);
     			attr_dev(div0, "class", "w-1/2 px-8 overflow-wrap");
-    			add_location(div0, file, 1070, 4, 36722);
+    			add_location(div0, file, 1113, 4, 37941);
     			attr_dev(div1, "class", "w-1/2 px-8");
-    			add_location(div1, file, 1104, 4, 38057);
+    			add_location(div1, file, 1153, 4, 39539);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -55428,7 +55855,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			current = true;
     		},
     		p: function update(ctx, dirty) {
-    			if (/*$games*/ ctx[20].length) {
+    			if (/*$games*/ ctx[24].length) {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
     				} else {
@@ -55441,7 +55868,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block0 = null;
     			}
 
-    			if (/*$ownedGames*/ ctx[21].length) {
+    			if (/*$ownedGames*/ ctx[25].length) {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
@@ -55473,9 +55900,9 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     			input1.$set(input1_changes);
 
-    			if (/*minting*/ ctx[2]) {
+    			if (/*minting*/ ctx[3]) {
     				if (if_block2) {
-    					if (dirty[0] & /*minting*/ 4) {
+    					if (dirty[0] & /*minting*/ 8) {
     						transition_in(if_block2, 1);
     					}
     				} else {
@@ -55494,11 +55921,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				check_outros();
     			}
 
-    			if (!/*minting*/ ctx[2]) {
+    			if (!/*minting*/ ctx[3]) {
     				if (if_block3) {
     					if_block3.p(ctx, dirty);
 
-    					if (dirty[0] & /*minting*/ 4) {
+    					if (dirty[0] & /*minting*/ 8) {
     						transition_in(if_block3, 1);
     					}
     				} else {
@@ -55549,17 +55976,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_5.name,
     		type: "if",
-    		source: "(1070:4) {#if typeof $gameId !== 'number'}",
+    		source: "(1113:4) {#if typeof $gameId !== 'number'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1074:6) {#if $games.length}
+    // (1117:6) {#if $games.length}
     function create_if_block_9(ctx) {
     	let each_1_anchor;
-    	let each_value_5 = /*$games*/ ctx[20];
+    	let each_value_5 = /*$games*/ ctx[24];
     	validate_each_argument(each_value_5);
     	let each_blocks = [];
 
@@ -55583,8 +56010,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, each_1_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$games, loadGame*/ 9437184) {
-    				each_value_5 = /*$games*/ ctx[20];
+    			if (dirty[0] & /*$games, loadGame*/ 150994944) {
+    				each_value_5 = /*$games*/ ctx[24];
     				validate_each_argument(each_value_5);
     				let i;
 
@@ -55617,32 +56044,37 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_9.name,
     		type: "if",
-    		source: "(1074:6) {#if $games.length}",
+    		source: "(1117:6) {#if $games.length}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1075:6) {#each $games as game}
+    // (1118:6) {#each $games as game}
     function create_each_block_5(ctx) {
     	let p0;
     	let t0;
     	let p1;
     	let t1;
     	let span;
-    	let t2_value = /*game*/ ctx[65].id + "";
+    	let t2_value = /*game*/ ctx[73].id + "";
     	let t2;
     	let t3;
     	let p2;
     	let t4;
-    	let t5_value = /*game*/ ctx[65].player1 + "";
+    	let t5_value = formatEther(/*game*/ ctx[73].bounty) + "";
     	let t5;
     	let t6;
     	let p3;
     	let t7;
-    	let t8_value = /*game*/ ctx[65].player2 + "";
+    	let t8_value = /*game*/ ctx[73].player1 + "";
     	let t8;
+    	let t9;
+    	let p4;
+    	let t10;
+    	let t11_value = /*game*/ ctx[73].player2 + "";
+    	let t11;
     	let mounted;
     	let dispose;
 
@@ -55656,22 +56088,28 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t2 = text$1(t2_value);
     			t3 = space();
     			p2 = element("p");
-    			t4 = text$1("Player 1: ");
+    			t4 = text$1("Game Bounty: ");
     			t5 = text$1(t5_value);
     			t6 = space();
     			p3 = element("p");
-    			t7 = text$1("Player 2: ");
+    			t7 = text$1("Player 1: ");
     			t8 = text$1(t8_value);
+    			t9 = space();
+    			p4 = element("p");
+    			t10 = text$1("Player 2: ");
+    			t11 = text$1(t11_value);
     			attr_dev(p0, "class", "w-full border border-solid-bottom border-gray-300");
-    			add_location(p0, file, 1075, 6, 36876);
+    			add_location(p0, file, 1118, 6, 38095);
     			attr_dev(span, "class", "pl-4 hover:underline cursor-pointer text-blue-300");
-    			add_location(span, file, 1077, 17, 36986);
+    			add_location(span, file, 1120, 17, 38205);
     			attr_dev(p1, "class", "truncate");
-    			add_location(p1, file, 1076, 6, 36948);
+    			add_location(p1, file, 1119, 6, 38167);
     			attr_dev(p2, "class", "truncate");
-    			add_location(p2, file, 1079, 6, 37112);
+    			add_location(p2, file, 1122, 6, 38331);
     			attr_dev(p3, "class", "truncate");
-    			add_location(p3, file, 1080, 6, 37167);
+    			add_location(p3, file, 1123, 6, 38407);
+    			attr_dev(p4, "class", "truncate");
+    			add_location(p4, file, 1124, 6, 38462);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p0, anchor);
@@ -55688,13 +56126,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, p3, anchor);
     			append_dev(p3, t7);
     			append_dev(p3, t8);
+    			insert_dev(target, t9, anchor);
+    			insert_dev(target, p4, anchor);
+    			append_dev(p4, t10);
+    			append_dev(p4, t11);
 
     			if (!mounted) {
     				dispose = listen_dev(
     					span,
     					"click",
     					function () {
-    						if (is_function(/*loadGame*/ ctx[23](/*game*/ ctx[65]))) /*loadGame*/ ctx[23](/*game*/ ctx[65]).apply(this, arguments);
+    						if (is_function(/*loadGame*/ ctx[27](/*game*/ ctx[73]))) /*loadGame*/ ctx[27](/*game*/ ctx[73]).apply(this, arguments);
     					},
     					false,
     					false,
@@ -55706,9 +56148,10 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		},
     		p: function update(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*$games*/ 1048576 && t2_value !== (t2_value = /*game*/ ctx[65].id + "")) set_data_dev(t2, t2_value);
-    			if (dirty[0] & /*$games*/ 1048576 && t5_value !== (t5_value = /*game*/ ctx[65].player1 + "")) set_data_dev(t5, t5_value);
-    			if (dirty[0] & /*$games*/ 1048576 && t8_value !== (t8_value = /*game*/ ctx[65].player2 + "")) set_data_dev(t8, t8_value);
+    			if (dirty[0] & /*$games*/ 16777216 && t2_value !== (t2_value = /*game*/ ctx[73].id + "")) set_data_dev(t2, t2_value);
+    			if (dirty[0] & /*$games*/ 16777216 && t5_value !== (t5_value = formatEther(/*game*/ ctx[73].bounty) + "")) set_data_dev(t5, t5_value);
+    			if (dirty[0] & /*$games*/ 16777216 && t8_value !== (t8_value = /*game*/ ctx[73].player1 + "")) set_data_dev(t8, t8_value);
+    			if (dirty[0] & /*$games*/ 16777216 && t11_value !== (t11_value = /*game*/ ctx[73].player2 + "")) set_data_dev(t11, t11_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(p0);
@@ -55718,6 +56161,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			if (detaching) detach_dev(p2);
     			if (detaching) detach_dev(t6);
     			if (detaching) detach_dev(p3);
+    			if (detaching) detach_dev(t9);
+    			if (detaching) detach_dev(p4);
     			mounted = false;
     			dispose();
     		}
@@ -55727,17 +56172,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block_5.name,
     		type: "each",
-    		source: "(1075:6) {#each $games as game}",
+    		source: "(1118:6) {#each $games as game}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1087:6) {#if $ownedGames.length}
+    // (1131:6) {#if $ownedGames.length}
     function create_if_block_8(ctx) {
     	let each_1_anchor;
-    	let each_value_4 = /*$ownedGames*/ ctx[21];
+    	let each_value_4 = /*$ownedGames*/ ctx[25];
     	validate_each_argument(each_value_4);
     	let each_blocks = [];
 
@@ -55761,8 +56206,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, each_1_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$ownedGames, loadGame*/ 10485760) {
-    				each_value_4 = /*$ownedGames*/ ctx[21];
+    			if (dirty[0] & /*$ownedGames, bountyGame, loadGame*/ 167772192) {
+    				each_value_4 = /*$ownedGames*/ ctx[25];
     				validate_each_argument(each_value_4);
     				let i;
 
@@ -55795,44 +56240,50 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_8.name,
     		type: "if",
-    		source: "(1087:6) {#if $ownedGames.length}",
+    		source: "(1131:6) {#if $ownedGames.length}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1088:6) {#each $ownedGames as ownedGame}
+    // (1132:6) {#each $ownedGames as ownedGame}
     function create_each_block_4(ctx) {
     	let p0;
     	let t0;
     	let p1;
     	let t1;
-    	let span;
-    	let t2_value = /*ownedGame*/ ctx[62].id + "";
+    	let span0;
+    	let t2_value = /*ownedGame*/ ctx[70].id + "";
     	let t2;
     	let t3;
     	let p2;
     	let t4;
-    	let t5_value = /*ownedGame*/ ctx[62].bounty + "";
+    	let t5_value = formatEther(/*ownedGame*/ ctx[70].bounty) + "";
     	let t5;
     	let t6;
-    	let p3;
-    	let t7;
-    	let t8_value = /*ownedGame*/ ctx[62].player1 + "";
+    	let span1;
     	let t8;
+    	let p3;
     	let t9;
-    	let p4;
+    	let t10_value = /*ownedGame*/ ctx[70].player1 + "";
     	let t10;
-    	let t11_value = /*ownedGame*/ ctx[62].player2 + "";
     	let t11;
+    	let p4;
     	let t12;
-    	let p5;
+    	let t13_value = /*ownedGame*/ ctx[70].player2 + "";
     	let t13;
-    	let t14_value = /*ownedGame*/ ctx[62].winner + "";
     	let t14;
+    	let p5;
+    	let t15;
+    	let t16_value = /*ownedGame*/ ctx[70].winner + "";
+    	let t16;
     	let mounted;
     	let dispose;
+
+    	function click_handler_9() {
+    		return /*click_handler_9*/ ctx[47](/*ownedGame*/ ctx[70]);
+    	}
 
     	const block = {
     		c: function create() {
@@ -55840,85 +56291,95 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t0 = space();
     			p1 = element("p");
     			t1 = text$1("Game ID:\n        ");
-    			span = element("span");
+    			span0 = element("span");
     			t2 = text$1(t2_value);
     			t3 = space();
     			p2 = element("p");
     			t4 = text$1("Game Bounty: ");
     			t5 = text$1(t5_value);
     			t6 = space();
+    			span1 = element("span");
+    			span1.textContent = "Add Bounty";
+    			t8 = space();
     			p3 = element("p");
-    			t7 = text$1("Player 1: ");
-    			t8 = text$1(t8_value);
-    			t9 = space();
+    			t9 = text$1("Player 1: ");
+    			t10 = text$1(t10_value);
+    			t11 = space();
     			p4 = element("p");
-    			t10 = text$1("Player 2: ");
-    			t11 = text$1(t11_value);
-    			t12 = space();
+    			t12 = text$1("Player 2: ");
+    			t13 = text$1(t13_value);
+    			t14 = space();
     			p5 = element("p");
-    			t13 = text$1("Winner: ");
-    			t14 = text$1(t14_value);
+    			t15 = text$1("Winner: ");
+    			t16 = text$1(t16_value);
     			attr_dev(p0, "class", "w-full border border-solid-bottom border-gray-300");
-    			add_location(p0, file, 1088, 6, 37436);
-    			attr_dev(span, "class", "pl-4 cursor-pointer hover:underline text-blue-300");
-    			add_location(span, file, 1091, 8, 37554);
+    			add_location(p0, file, 1132, 6, 38731);
+    			attr_dev(span0, "class", "pl-4 cursor-pointer hover:underline text-blue-300");
+    			add_location(span0, file, 1135, 8, 38849);
     			attr_dev(p1, "class", "truncate");
-    			add_location(p1, file, 1089, 6, 37508);
+    			add_location(p1, file, 1133, 6, 38803);
+    			attr_dev(span1, "class", "pl-4 cursor-pointer hover:underline text-blue-300");
+    			add_location(span1, file, 1141, 8, 39093);
     			attr_dev(p2, "class", "truncate");
-    			add_location(p2, file, 1095, 6, 37710);
+    			add_location(p2, file, 1139, 6, 39005);
     			attr_dev(p3, "class", "truncate");
-    			add_location(p3, file, 1096, 6, 37772);
+    			add_location(p3, file, 1145, 6, 39254);
     			attr_dev(p4, "class", "truncate");
-    			add_location(p4, file, 1097, 6, 37832);
+    			add_location(p4, file, 1146, 6, 39314);
     			attr_dev(p5, "class", "truncate");
-    			add_location(p5, file, 1098, 6, 37892);
+    			add_location(p5, file, 1147, 6, 39374);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p0, anchor);
     			insert_dev(target, t0, anchor);
     			insert_dev(target, p1, anchor);
     			append_dev(p1, t1);
-    			append_dev(p1, span);
-    			append_dev(span, t2);
+    			append_dev(p1, span0);
+    			append_dev(span0, t2);
     			insert_dev(target, t3, anchor);
     			insert_dev(target, p2, anchor);
     			append_dev(p2, t4);
     			append_dev(p2, t5);
-    			insert_dev(target, t6, anchor);
+    			append_dev(p2, t6);
+    			append_dev(p2, span1);
+    			insert_dev(target, t8, anchor);
     			insert_dev(target, p3, anchor);
-    			append_dev(p3, t7);
-    			append_dev(p3, t8);
-    			insert_dev(target, t9, anchor);
+    			append_dev(p3, t9);
+    			append_dev(p3, t10);
+    			insert_dev(target, t11, anchor);
     			insert_dev(target, p4, anchor);
-    			append_dev(p4, t10);
-    			append_dev(p4, t11);
-    			insert_dev(target, t12, anchor);
+    			append_dev(p4, t12);
+    			append_dev(p4, t13);
+    			insert_dev(target, t14, anchor);
     			insert_dev(target, p5, anchor);
-    			append_dev(p5, t13);
-    			append_dev(p5, t14);
+    			append_dev(p5, t15);
+    			append_dev(p5, t16);
 
     			if (!mounted) {
-    				dispose = listen_dev(
-    					span,
-    					"click",
-    					function () {
-    						if (is_function(/*loadGame*/ ctx[23](/*ownedGame*/ ctx[62]))) /*loadGame*/ ctx[23](/*ownedGame*/ ctx[62]).apply(this, arguments);
-    					},
-    					false,
-    					false,
-    					false
-    				);
+    				dispose = [
+    					listen_dev(
+    						span0,
+    						"click",
+    						function () {
+    							if (is_function(/*loadGame*/ ctx[27](/*ownedGame*/ ctx[70]))) /*loadGame*/ ctx[27](/*ownedGame*/ ctx[70]).apply(this, arguments);
+    						},
+    						false,
+    						false,
+    						false
+    					),
+    					listen_dev(span1, "click", click_handler_9, false, false, false)
+    				];
 
     				mounted = true;
     			}
     		},
     		p: function update(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*$ownedGames*/ 2097152 && t2_value !== (t2_value = /*ownedGame*/ ctx[62].id + "")) set_data_dev(t2, t2_value);
-    			if (dirty[0] & /*$ownedGames*/ 2097152 && t5_value !== (t5_value = /*ownedGame*/ ctx[62].bounty + "")) set_data_dev(t5, t5_value);
-    			if (dirty[0] & /*$ownedGames*/ 2097152 && t8_value !== (t8_value = /*ownedGame*/ ctx[62].player1 + "")) set_data_dev(t8, t8_value);
-    			if (dirty[0] & /*$ownedGames*/ 2097152 && t11_value !== (t11_value = /*ownedGame*/ ctx[62].player2 + "")) set_data_dev(t11, t11_value);
-    			if (dirty[0] & /*$ownedGames*/ 2097152 && t14_value !== (t14_value = /*ownedGame*/ ctx[62].winner + "")) set_data_dev(t14, t14_value);
+    			if (dirty[0] & /*$ownedGames*/ 33554432 && t2_value !== (t2_value = /*ownedGame*/ ctx[70].id + "")) set_data_dev(t2, t2_value);
+    			if (dirty[0] & /*$ownedGames*/ 33554432 && t5_value !== (t5_value = formatEther(/*ownedGame*/ ctx[70].bounty) + "")) set_data_dev(t5, t5_value);
+    			if (dirty[0] & /*$ownedGames*/ 33554432 && t10_value !== (t10_value = /*ownedGame*/ ctx[70].player1 + "")) set_data_dev(t10, t10_value);
+    			if (dirty[0] & /*$ownedGames*/ 33554432 && t13_value !== (t13_value = /*ownedGame*/ ctx[70].player2 + "")) set_data_dev(t13, t13_value);
+    			if (dirty[0] & /*$ownedGames*/ 33554432 && t16_value !== (t16_value = /*ownedGame*/ ctx[70].winner + "")) set_data_dev(t16, t16_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(p0);
@@ -55926,14 +56387,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			if (detaching) detach_dev(p1);
     			if (detaching) detach_dev(t3);
     			if (detaching) detach_dev(p2);
-    			if (detaching) detach_dev(t6);
+    			if (detaching) detach_dev(t8);
     			if (detaching) detach_dev(p3);
-    			if (detaching) detach_dev(t9);
+    			if (detaching) detach_dev(t11);
     			if (detaching) detach_dev(p4);
-    			if (detaching) detach_dev(t12);
+    			if (detaching) detach_dev(t14);
     			if (detaching) detach_dev(p5);
     			mounted = false;
-    			dispose();
+    			run_all(dispose);
     		}
     	};
 
@@ -55941,14 +56402,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block_4.name,
     		type: "each",
-    		source: "(1088:6) {#each $ownedGames as ownedGame}",
+    		source: "(1132:6) {#each $ownedGames as ownedGame}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1110:6) {#if minting}
+    // (1159:6) {#if minting}
     function create_if_block_7(ctx) {
     	let spinner;
     	let current;
@@ -55984,14 +56445,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_7.name,
     		type: "if",
-    		source: "(1110:6) {#if minting}",
+    		source: "(1159:6) {#if minting}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1113:6) {#if !minting}
+    // (1162:6) {#if !minting}
     function create_if_block_6(ctx) {
     	let button;
     	let current;
@@ -55999,14 +56460,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	button = new Button({
     			props: {
     				type: "primary",
-    				disabled: !/*validMint*/ ctx[11](),
+    				disabled: !/*validMint*/ ctx[14](),
     				$$slots: { default: [create_default_slot] },
     				$$scope: { ctx }
     			},
     			$$inline: true
     		});
 
-    	button.$on("click", /*mint*/ ctx[26]);
+    	button.$on("click", /*mint*/ ctx[30]);
 
     	const block = {
     		c: function create() {
@@ -56018,9 +56479,9 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		},
     		p: function update(ctx, dirty) {
     			const button_changes = {};
-    			if (dirty[0] & /*validMint*/ 2048) button_changes.disabled = !/*validMint*/ ctx[11]();
+    			if (dirty[0] & /*validMint*/ 16384) button_changes.disabled = !/*validMint*/ ctx[14]();
 
-    			if (dirty[2] & /*$$scope*/ 512) {
+    			if (dirty[2] & /*$$scope*/ 131072) {
     				button_changes.$$scope = { dirty, ctx };
     			}
 
@@ -56044,14 +56505,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_6.name,
     		type: "if",
-    		source: "(1113:6) {#if !minting}",
+    		source: "(1162:6) {#if !minting}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1114:6) <Button type="primary" on:click="{mint}" disabled="{!validMint()}">
+    // (1163:6) <Button type="primary" on:click="{mint}" disabled="{!validMint()}">
     function create_default_slot(ctx) {
     	let t;
 
@@ -56071,14 +56532,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(1114:6) <Button type=\\\"primary\\\" on:click=\\\"{mint}\\\" disabled=\\\"{!validMint()}\\\">",
+    		source: "(1163:6) <Button type=\\\"primary\\\" on:click=\\\"{mint}\\\" disabled=\\\"{!validMint()}\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1121:4) {#if typeof $gameId === 'number'}
+    // (1170:4) {#if typeof $gameId === 'number'}
     function create_if_block_1(ctx) {
     	let div0;
     	let t0;
@@ -56098,7 +56559,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	let tr1;
     	let th2;
     	let t9;
-    	let each_value_2 = /*pieceSpace*/ ctx[7];
+    	let each_value_2 = /*pieceSpace*/ ctx[10];
     	validate_each_argument(each_value_2);
     	let each_blocks_2 = [];
 
@@ -56106,8 +56567,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		each_blocks_2[i] = create_each_block_2(get_each_context_2(ctx, each_value_2, i));
     	}
 
-    	let if_block = !/*$audience*/ ctx[15] && create_if_block_4(ctx);
-    	let each_value_1 = /*history*/ ctx[8];
+    	let if_block = !/*$audience*/ ctx[19] && create_if_block_4(ctx);
+    	let each_value_1 = /*history*/ ctx[11];
     	validate_each_argument(each_value_1);
     	let each_blocks_1 = [];
 
@@ -56115,7 +56576,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		each_blocks_1[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
     	}
 
-    	let each_value = /*history*/ ctx[8];
+    	let each_value = /*history*/ ctx[11];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
@@ -56163,21 +56624,21 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			}
 
     			attr_dev(div0, "class", "chessboard svelte-1gmu9nd");
-    			add_location(div0, file, 1121, 4, 38520);
-    			add_location(h3, file, 1148, 6, 39295);
-    			add_location(th0, file, 1153, 12, 39410);
-    			add_location(th1, file, 1154, 12, 39432);
-    			add_location(tr0, file, 1152, 10, 39393);
+    			add_location(div0, file, 1170, 4, 40002);
+    			add_location(h3, file, 1197, 6, 40777);
+    			add_location(th0, file, 1202, 12, 40892);
+    			add_location(th1, file, 1203, 12, 40914);
+    			add_location(tr0, file, 1201, 10, 40875);
     			attr_dev(table0, "class", "move-table svelte-1gmu9nd");
-    			add_location(table0, file, 1151, 8, 39356);
-    			add_location(th2, file, 1168, 12, 39742);
-    			add_location(tr1, file, 1167, 10, 39725);
+    			add_location(table0, file, 1200, 8, 40838);
+    			add_location(th2, file, 1217, 12, 41224);
+    			add_location(tr1, file, 1216, 10, 41207);
     			attr_dev(table1, "class", "move-table svelte-1gmu9nd");
-    			add_location(table1, file, 1166, 8, 39688);
+    			add_location(table1, file, 1215, 8, 41170);
     			attr_dev(div1, "class", "flex items-start");
-    			add_location(div1, file, 1150, 6, 39317);
+    			add_location(div1, file, 1199, 6, 40799);
     			attr_dev(div2, "class", "history svelte-1gmu9nd");
-    			add_location(div2, file, 1141, 4, 39146);
+    			add_location(div2, file, 1190, 4, 40628);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -56215,8 +56676,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			}
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*pieceSpace, $myColor, dropPiece*/ 134221952) {
-    				each_value_2 = /*pieceSpace*/ ctx[7];
+    			if (dirty[0] & /*pieceSpace, $myColor*/ 66560 | dirty[1] & /*dropPiece*/ 2) {
+    				each_value_2 = /*pieceSpace*/ ctx[10];
     				validate_each_argument(each_value_2);
     				let i;
 
@@ -56239,7 +56700,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				each_blocks_2.length = each_value_2.length;
     			}
 
-    			if (!/*$audience*/ ctx[15]) {
+    			if (!/*$audience*/ ctx[19]) {
     				if (if_block) {
     					if_block.p(ctx, dirty);
     				} else {
@@ -56252,8 +56713,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				if_block = null;
     			}
 
-    			if (dirty[0] & /*history*/ 256) {
-    				each_value_1 = /*history*/ ctx[8];
+    			if (dirty[0] & /*history*/ 2048) {
+    				each_value_1 = /*history*/ ctx[11];
     				validate_each_argument(each_value_1);
     				let i;
 
@@ -56276,8 +56737,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				each_blocks_1.length = each_value_1.length;
     			}
 
-    			if (dirty[0] & /*history*/ 256) {
-    				each_value = /*history*/ ctx[8];
+    			if (dirty[0] & /*history*/ 2048) {
+    				each_value = /*history*/ ctx[11];
     				validate_each_argument(each_value);
     				let i;
 
@@ -56315,18 +56776,18 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_1.name,
     		type: "if",
-    		source: "(1121:4) {#if typeof $gameId === 'number'}",
+    		source: "(1170:4) {#if typeof $gameId === 'number'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1125:6) {#each row as square, squareIndex}
+    // (1174:6) {#each row as square, squareIndex}
     function create_each_block_3(ctx) {
     	let div;
     	let html_tag;
-    	let raw_value = /*pieceSpace*/ ctx[7][colorTransform(/*rowIndex*/ ctx[58], /*$myColor*/ ctx[12])][colorTransform(/*squareIndex*/ ctx[61], /*$myColor*/ ctx[12])] + "";
+    	let raw_value = /*pieceSpace*/ ctx[10][colorTransform(/*rowIndex*/ ctx[66], /*$myColor*/ ctx[16])][colorTransform(/*squareIndex*/ ctx[69], /*$myColor*/ ctx[16])] + "";
     	let t;
     	let div_data_location_value;
     	let mounted;
@@ -56339,12 +56800,12 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			t = space();
     			html_tag.a = t;
 
-    			attr_dev(div, "class", "" + (null_to_empty((/*rowIndex*/ ctx[58] % 2 + /*squareIndex*/ ctx[61] % 8) % 2
+    			attr_dev(div, "class", "" + (null_to_empty((/*rowIndex*/ ctx[66] % 2 + /*squareIndex*/ ctx[69] % 8) % 2
     			? 'black'
     			: 'white') + " svelte-1gmu9nd"));
 
-    			attr_dev(div, "data-location", div_data_location_value = "" + (colorTransform(/*rowIndex*/ ctx[58], /*$myColor*/ ctx[12]) + "," + colorTransform(/*squareIndex*/ ctx[61], /*$myColor*/ ctx[12])));
-    			add_location(div, file, 1126, 8, 38638);
+    			attr_dev(div, "data-location", div_data_location_value = "" + (colorTransform(/*rowIndex*/ ctx[66], /*$myColor*/ ctx[16]) + "," + colorTransform(/*squareIndex*/ ctx[69], /*$myColor*/ ctx[16])));
+    			add_location(div, file, 1175, 8, 40120);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -56354,7 +56815,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			if (!mounted) {
     				dispose = [
     					listen_dev(div, "dragover", dragOver, false, false, false),
-    					listen_dev(div, "drop", /*dropPiece*/ ctx[27], false, false, false),
+    					listen_dev(div, "drop", /*dropPiece*/ ctx[32], false, false, false),
     					listen_dev(div, "dragstart", pickupPiece, false, false, false),
     					listen_dev(div, "dragend", putdownPiece, false, false, false)
     				];
@@ -56363,9 +56824,9 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			}
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*pieceSpace, $myColor*/ 4224 && raw_value !== (raw_value = /*pieceSpace*/ ctx[7][colorTransform(/*rowIndex*/ ctx[58], /*$myColor*/ ctx[12])][colorTransform(/*squareIndex*/ ctx[61], /*$myColor*/ ctx[12])] + "")) html_tag.p(raw_value);
+    			if (dirty[0] & /*pieceSpace, $myColor*/ 66560 && raw_value !== (raw_value = /*pieceSpace*/ ctx[10][colorTransform(/*rowIndex*/ ctx[66], /*$myColor*/ ctx[16])][colorTransform(/*squareIndex*/ ctx[69], /*$myColor*/ ctx[16])] + "")) html_tag.p(raw_value);
 
-    			if (dirty[0] & /*$myColor*/ 4096 && div_data_location_value !== (div_data_location_value = "" + (colorTransform(/*rowIndex*/ ctx[58], /*$myColor*/ ctx[12]) + "," + colorTransform(/*squareIndex*/ ctx[61], /*$myColor*/ ctx[12])))) {
+    			if (dirty[0] & /*$myColor*/ 65536 && div_data_location_value !== (div_data_location_value = "" + (colorTransform(/*rowIndex*/ ctx[66], /*$myColor*/ ctx[16]) + "," + colorTransform(/*squareIndex*/ ctx[69], /*$myColor*/ ctx[16])))) {
     				attr_dev(div, "data-location", div_data_location_value);
     			}
     		},
@@ -56380,17 +56841,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block_3.name,
     		type: "each",
-    		source: "(1125:6) {#each row as square, squareIndex}",
+    		source: "(1174:6) {#each row as square, squareIndex}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1124:6) {#each pieceSpace as row, rowIndex}
+    // (1173:6) {#each pieceSpace as row, rowIndex}
     function create_each_block_2(ctx) {
     	let each_1_anchor;
-    	let each_value_3 = /*row*/ ctx[56];
+    	let each_value_3 = /*row*/ ctx[64];
     	validate_each_argument(each_value_3);
     	let each_blocks = [];
 
@@ -56414,8 +56875,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, each_1_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$myColor, dropPiece, pieceSpace*/ 134221952) {
-    				each_value_3 = /*row*/ ctx[56];
+    			if (dirty[0] & /*$myColor, pieceSpace*/ 66560 | dirty[1] & /*dropPiece*/ 2) {
+    				each_value_3 = /*row*/ ctx[64];
     				validate_each_argument(each_value_3);
     				let i;
 
@@ -56448,14 +56909,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block_2.name,
     		type: "each",
-    		source: "(1124:6) {#each pieceSpace as row, rowIndex}",
+    		source: "(1173:6) {#each pieceSpace as row, rowIndex}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1143:6) {#if !$audience}
+    // (1192:6) {#if !$audience}
     function create_if_block_4(ctx) {
     	let h3;
     	let t0;
@@ -56467,10 +56928,10 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			h3 = element("h3");
     			t0 = text$1("You are playing as ");
     			b = element("b");
-    			t1 = text$1(/*$myColor*/ ctx[12]);
-    			add_location(b, file, 1144, 27, 39246);
+    			t1 = text$1(/*$myColor*/ ctx[16]);
+    			add_location(b, file, 1193, 27, 40728);
     			attr_dev(h3, "class", "max-w-sm");
-    			add_location(h3, file, 1143, 6, 39197);
+    			add_location(h3, file, 1192, 6, 40679);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, h3, anchor);
@@ -56479,7 +56940,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(b, t1);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$myColor*/ 4096) set_data_dev(t1, /*$myColor*/ ctx[12]);
+    			if (dirty[0] & /*$myColor*/ 65536) set_data_dev(t1, /*$myColor*/ ctx[16]);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(h3);
@@ -56490,22 +56951,22 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_4.name,
     		type: "if",
-    		source: "(1143:6) {#if !$audience}",
+    		source: "(1192:6) {#if !$audience}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1158:10) {#if !(i % 2)}
+    // (1207:10) {#if !(i % 2)}
     function create_if_block_3(ctx) {
     	let tr;
     	let td0;
-    	let t0_value = 1 + /*i*/ ctx[54] / 2 + "";
+    	let t0_value = 1 + /*i*/ ctx[62] / 2 + "";
     	let t0;
     	let t1;
     	let td1;
-    	let t2_value = /*move*/ ctx[52].notation + "";
+    	let t2_value = /*move*/ ctx[60].notation + "";
     	let t2;
     	let t3;
 
@@ -56518,9 +56979,9 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			td1 = element("td");
     			t2 = text$1(t2_value);
     			t3 = space();
-    			add_location(td0, file, 1159, 12, 39552);
-    			add_location(td1, file, 1160, 12, 39587);
-    			add_location(tr, file, 1158, 10, 39535);
+    			add_location(td0, file, 1208, 12, 41034);
+    			add_location(td1, file, 1209, 12, 41069);
+    			add_location(tr, file, 1207, 10, 41017);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, tr, anchor);
@@ -56532,7 +56993,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(tr, t3);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*history*/ 256 && t2_value !== (t2_value = /*move*/ ctx[52].notation + "")) set_data_dev(t2, t2_value);
+    			if (dirty[0] & /*history*/ 2048 && t2_value !== (t2_value = /*move*/ ctx[60].notation + "")) set_data_dev(t2, t2_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(tr);
@@ -56543,17 +57004,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_3.name,
     		type: "if",
-    		source: "(1158:10) {#if !(i % 2)}",
+    		source: "(1207:10) {#if !(i % 2)}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1157:10) {#each history as move, i}
+    // (1206:10) {#each history as move, i}
     function create_each_block_1(ctx) {
     	let if_block_anchor;
-    	let if_block = !(/*i*/ ctx[54] % 2) && create_if_block_3(ctx);
+    	let if_block = !(/*i*/ ctx[62] % 2) && create_if_block_3(ctx);
 
     	const block = {
     		c: function create() {
@@ -56565,7 +57026,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, if_block_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (!(/*i*/ ctx[54] % 2)) if_block.p(ctx, dirty);
+    			if (!(/*i*/ ctx[62] % 2)) if_block.p(ctx, dirty);
     		},
     		d: function destroy(detaching) {
     			if (if_block) if_block.d(detaching);
@@ -56577,18 +57038,18 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block_1.name,
     		type: "each",
-    		source: "(1157:10) {#each history as move, i}",
+    		source: "(1206:10) {#each history as move, i}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1172:10) {#if i % 2}
+    // (1221:10) {#if i % 2}
     function create_if_block_2(ctx) {
     	let tr;
     	let td;
-    	let t0_value = /*move*/ ctx[52].notation + "";
+    	let t0_value = /*move*/ ctx[60].notation + "";
     	let t0;
     	let t1;
 
@@ -56598,8 +57059,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			td = element("td");
     			t0 = text$1(t0_value);
     			t1 = space();
-    			add_location(td, file, 1173, 12, 39859);
-    			add_location(tr, file, 1172, 10, 39842);
+    			add_location(td, file, 1222, 12, 41341);
+    			add_location(tr, file, 1221, 10, 41324);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, tr, anchor);
@@ -56608,7 +57069,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			append_dev(tr, t1);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*history*/ 256 && t0_value !== (t0_value = /*move*/ ctx[52].notation + "")) set_data_dev(t0, t0_value);
+    			if (dirty[0] & /*history*/ 2048 && t0_value !== (t0_value = /*move*/ ctx[60].notation + "")) set_data_dev(t0, t0_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(tr);
@@ -56619,17 +57080,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(1172:10) {#if i % 2}",
+    		source: "(1221:10) {#if i % 2}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (1171:10) {#each history as move, i}
+    // (1220:10) {#each history as move, i}
     function create_each_block(ctx) {
     	let if_block_anchor;
-    	let if_block = /*i*/ ctx[54] % 2 && create_if_block_2(ctx);
+    	let if_block = /*i*/ ctx[62] % 2 && create_if_block_2(ctx);
 
     	const block = {
     		c: function create() {
@@ -56641,7 +57102,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, if_block_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (/*i*/ ctx[54] % 2) if_block.p(ctx, dirty);
+    			if (/*i*/ ctx[62] % 2) if_block.p(ctx, dirty);
     		},
     		d: function destroy(detaching) {
     			if (if_block) if_block.d(detaching);
@@ -56653,7 +57114,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(1171:10) {#each history as move, i}",
+    		source: "(1220:10) {#each history as move, i}",
     		ctx
     	});
 
@@ -56663,26 +57124,28 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     function create_fragment(ctx) {
     	let main;
     	let t0;
+    	let t1;
     	let modal;
     	let updating_visible;
-    	let t1;
-    	let div0;
     	let t2;
+    	let div0;
+    	let t3;
     	let div3;
     	let div2;
     	let div1;
     	let span;
-    	let t4;
     	let t5;
     	let t6;
     	let t7;
+    	let t8;
     	let current;
     	let mounted;
     	let dispose;
-    	let if_block0 = /*newGame*/ ctx[3] && create_if_block_22(ctx);
+    	let if_block0 = /*newGame*/ ctx[4] && create_if_block_25(ctx);
+    	let if_block1 = /*bountyGame*/ ctx[5] && create_if_block_22(ctx);
 
-    	function modal_visible_binding_1(value) {
-    		/*modal_visible_binding_1*/ ctx[39](value);
+    	function modal_visible_binding_2(value) {
+    		/*modal_visible_binding_2*/ ctx[46](value);
     	}
 
     	let modal_props = {
@@ -56691,13 +57154,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		$$scope: { ctx }
     	};
 
-    	if (/*showPromoteModal*/ ctx[4] !== void 0) {
-    		modal_props.visible = /*showPromoteModal*/ ctx[4];
+    	if (/*showPromoteModal*/ ctx[7] !== void 0) {
+    		modal_props.visible = /*showPromoteModal*/ ctx[7];
     	}
 
     	modal = new Modal({ props: modal_props, $$inline: true });
-    	binding_callbacks.push(() => bind(modal, 'visible', modal_visible_binding_1));
-    	let each_value_6 = /*$alerts*/ ctx[13];
+    	binding_callbacks.push(() => bind(modal, 'visible', modal_visible_binding_2));
+    	let each_value_6 = /*$alerts*/ ctx[17];
     	validate_each_argument(each_value_6);
     	let each_blocks = [];
 
@@ -56709,50 +57172,52 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		each_blocks[i] = null;
     	});
 
-    	let if_block1 = typeof /*$gameId*/ ctx[14] === 'number' && create_if_block_12(ctx);
-    	let if_block2 = /*$myAddress*/ ctx[18] && create_if_block_11(ctx);
-    	let if_block3 = !/*$connected*/ ctx[19] && create_if_block_10(ctx);
-    	let if_block4 = /*$connected*/ ctx[19] && create_if_block(ctx);
+    	let if_block2 = typeof /*$gameId*/ ctx[18] === 'number' && create_if_block_12(ctx);
+    	let if_block3 = /*$myAddress*/ ctx[22] && create_if_block_11(ctx);
+    	let if_block4 = !/*$connected*/ ctx[23] && create_if_block_10(ctx);
+    	let if_block5 = /*$connected*/ ctx[23] && create_if_block(ctx);
 
     	const block = {
     		c: function create() {
     			main = element("main");
     			if (if_block0) if_block0.c();
     			t0 = space();
-    			create_component(modal.$$.fragment);
+    			if (if_block1) if_block1.c();
     			t1 = space();
+    			create_component(modal.$$.fragment);
+    			t2 = space();
     			div0 = element("div");
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
-    			t2 = space();
+    			t3 = space();
     			div3 = element("div");
     			div2 = element("div");
     			div1 = element("div");
     			span = element("span");
     			span.textContent = "Tableland Chess";
-    			t4 = space();
-    			if (if_block1) if_block1.c();
     			t5 = space();
     			if (if_block2) if_block2.c();
     			t6 = space();
     			if (if_block3) if_block3.c();
     			t7 = space();
     			if (if_block4) if_block4.c();
+    			t8 = space();
+    			if (if_block5) if_block5.c();
     			attr_dev(div0, "class", "fixed left-4 right-4");
-    			add_location(div0, file, 1002, 2, 34725);
+    			add_location(div0, file, 1045, 2, 35944);
     			attr_dev(span, "class", "cursor-pointer hover:underline text-blue-300");
-    			add_location(span, file, 1013, 8, 35108);
+    			add_location(span, file, 1056, 8, 36327);
     			attr_dev(div1, "class", "col-span-5");
-    			add_location(div1, file, 1011, 6, 35074);
+    			add_location(div1, file, 1054, 6, 36293);
     			attr_dev(div2, "class", "mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold");
-    			add_location(div2, file, 1010, 4, 34981);
+    			add_location(div2, file, 1053, 4, 36200);
     			attr_dev(div3, "class", "text-center");
-    			add_location(div3, file, 1009, 2, 34951);
+    			add_location(div3, file, 1052, 2, 36170);
     			attr_dev(main, "class", "relative");
-    			add_location(main, file, 940, 0, 32872);
+    			add_location(main, file, 954, 0, 33212);
     		},
     		l: function claim(nodes) {
     			throw new Error_1("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -56761,44 +57226,46 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			insert_dev(target, main, anchor);
     			if (if_block0) if_block0.m(main, null);
     			append_dev(main, t0);
-    			mount_component(modal, main, null);
+    			if (if_block1) if_block1.m(main, null);
     			append_dev(main, t1);
+    			mount_component(modal, main, null);
+    			append_dev(main, t2);
     			append_dev(main, div0);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].m(div0, null);
     			}
 
-    			append_dev(main, t2);
+    			append_dev(main, t3);
     			append_dev(main, div3);
     			append_dev(div3, div2);
     			append_dev(div2, div1);
     			append_dev(div1, span);
-    			append_dev(div1, t4);
-    			if (if_block1) if_block1.m(div1, null);
-    			append_dev(div2, t5);
-    			if (if_block2) if_block2.m(div2, null);
-    			append_dev(main, t6);
-    			if (if_block3) if_block3.m(main, null);
+    			append_dev(div1, t5);
+    			if (if_block2) if_block2.m(div1, null);
+    			append_dev(div2, t6);
+    			if (if_block3) if_block3.m(div2, null);
     			append_dev(main, t7);
     			if (if_block4) if_block4.m(main, null);
+    			append_dev(main, t8);
+    			if (if_block5) if_block5.m(main, null);
     			current = true;
 
     			if (!mounted) {
-    				dispose = listen_dev(span, "click", /*unloadGame*/ ctx[24], false, false, false);
+    				dispose = listen_dev(span, "click", /*unloadGame*/ ctx[28], false, false, false);
     				mounted = true;
     			}
     		},
     		p: function update(ctx, dirty) {
-    			if (/*newGame*/ ctx[3]) {
+    			if (/*newGame*/ ctx[4]) {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
 
-    					if (dirty[0] & /*newGame*/ 8) {
+    					if (dirty[0] & /*newGame*/ 16) {
     						transition_in(if_block0, 1);
     					}
     				} else {
-    					if_block0 = create_if_block_22(ctx);
+    					if_block0 = create_if_block_25(ctx);
     					if_block0.c();
     					transition_in(if_block0, 1);
     					if_block0.m(main, t0);
@@ -56813,22 +57280,45 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				check_outros();
     			}
 
+    			if (/*bountyGame*/ ctx[5]) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+
+    					if (dirty[0] & /*bountyGame*/ 32) {
+    						transition_in(if_block1, 1);
+    					}
+    				} else {
+    					if_block1 = create_if_block_22(ctx);
+    					if_block1.c();
+    					transition_in(if_block1, 1);
+    					if_block1.m(main, t1);
+    				}
+    			} else if (if_block1) {
+    				group_outros();
+
+    				transition_out(if_block1, 1, 1, () => {
+    					if_block1 = null;
+    				});
+
+    				check_outros();
+    			}
+
     			const modal_changes = {};
 
-    			if (dirty[0] & /*promoteColor*/ 32 | dirty[2] & /*$$scope*/ 512) {
+    			if (dirty[0] & /*promoteColor*/ 256 | dirty[2] & /*$$scope*/ 131072) {
     				modal_changes.$$scope = { dirty, ctx };
     			}
 
-    			if (!updating_visible && dirty[0] & /*showPromoteModal*/ 16) {
+    			if (!updating_visible && dirty[0] & /*showPromoteModal*/ 128) {
     				updating_visible = true;
-    				modal_changes.visible = /*showPromoteModal*/ ctx[4];
+    				modal_changes.visible = /*showPromoteModal*/ ctx[7];
     				add_flush_callback(() => updating_visible = false);
     			}
 
     			modal.$set(modal_changes);
 
-    			if (dirty[0] & /*$alerts*/ 8192) {
-    				each_value_6 = /*$alerts*/ ctx[13];
+    			if (dirty[0] & /*$alerts*/ 131072) {
+    				each_value_6 = /*$alerts*/ ctx[17];
     				validate_each_argument(each_value_6);
     				let i;
 
@@ -56855,63 +57345,63 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				check_outros();
     			}
 
-    			if (typeof /*$gameId*/ ctx[14] === 'number') {
-    				if (if_block1) {
-    					if_block1.p(ctx, dirty);
-    				} else {
-    					if_block1 = create_if_block_12(ctx);
-    					if_block1.c();
-    					if_block1.m(div1, null);
-    				}
-    			} else if (if_block1) {
-    				if_block1.d(1);
-    				if_block1 = null;
-    			}
-
-    			if (/*$myAddress*/ ctx[18]) {
+    			if (typeof /*$gameId*/ ctx[18] === 'number') {
     				if (if_block2) {
     					if_block2.p(ctx, dirty);
     				} else {
-    					if_block2 = create_if_block_11(ctx);
+    					if_block2 = create_if_block_12(ctx);
     					if_block2.c();
-    					if_block2.m(div2, null);
+    					if_block2.m(div1, null);
     				}
     			} else if (if_block2) {
     				if_block2.d(1);
     				if_block2 = null;
     			}
 
-    			if (!/*$connected*/ ctx[19]) {
+    			if (/*$myAddress*/ ctx[22]) {
     				if (if_block3) {
     					if_block3.p(ctx, dirty);
     				} else {
-    					if_block3 = create_if_block_10(ctx);
+    					if_block3 = create_if_block_11(ctx);
     					if_block3.c();
-    					if_block3.m(main, t7);
+    					if_block3.m(div2, null);
     				}
     			} else if (if_block3) {
     				if_block3.d(1);
     				if_block3 = null;
     			}
 
-    			if (/*$connected*/ ctx[19]) {
+    			if (!/*$connected*/ ctx[23]) {
     				if (if_block4) {
     					if_block4.p(ctx, dirty);
-
-    					if (dirty[0] & /*$connected*/ 524288) {
-    						transition_in(if_block4, 1);
-    					}
     				} else {
-    					if_block4 = create_if_block(ctx);
+    					if_block4 = create_if_block_10(ctx);
     					if_block4.c();
-    					transition_in(if_block4, 1);
-    					if_block4.m(main, null);
+    					if_block4.m(main, t8);
     				}
     			} else if (if_block4) {
+    				if_block4.d(1);
+    				if_block4 = null;
+    			}
+
+    			if (/*$connected*/ ctx[23]) {
+    				if (if_block5) {
+    					if_block5.p(ctx, dirty);
+
+    					if (dirty[0] & /*$connected*/ 8388608) {
+    						transition_in(if_block5, 1);
+    					}
+    				} else {
+    					if_block5 = create_if_block(ctx);
+    					if_block5.c();
+    					transition_in(if_block5, 1);
+    					if_block5.m(main, null);
+    				}
+    			} else if (if_block5) {
     				group_outros();
 
-    				transition_out(if_block4, 1, 1, () => {
-    					if_block4 = null;
+    				transition_out(if_block5, 1, 1, () => {
+    					if_block5 = null;
     				});
 
     				check_outros();
@@ -56920,17 +57410,19 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		i: function intro(local) {
     			if (current) return;
     			transition_in(if_block0);
+    			transition_in(if_block1);
     			transition_in(modal.$$.fragment, local);
 
     			for (let i = 0; i < each_value_6.length; i += 1) {
     				transition_in(each_blocks[i]);
     			}
 
-    			transition_in(if_block4);
+    			transition_in(if_block5);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(if_block0);
+    			transition_out(if_block1);
     			transition_out(modal.$$.fragment, local);
     			each_blocks = each_blocks.filter(Boolean_1);
 
@@ -56938,18 +57430,19 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				transition_out(each_blocks[i]);
     			}
 
-    			transition_out(if_block4);
+    			transition_out(if_block5);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
     			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
     			destroy_component(modal);
     			destroy_each(each_blocks, detaching);
-    			if (if_block1) if_block1.d();
     			if (if_block2) if_block2.d();
     			if (if_block3) if_block3.d();
     			if (if_block4) if_block4.d();
+    			if (if_block5) if_block5.d();
     			mounted = false;
     			dispose();
     		}
@@ -57707,6 +58200,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     function instance($$self, $$props, $$invalidate) {
     	let validMint;
+    	let validBounty;
     	let $myColor;
     	let $alerts;
     	let $gameId;
@@ -57718,25 +58212,25 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	let $games;
     	let $ownedGames;
     	validate_store(myColor, 'myColor');
-    	component_subscribe($$self, myColor, $$value => $$invalidate(12, $myColor = $$value));
+    	component_subscribe($$self, myColor, $$value => $$invalidate(16, $myColor = $$value));
     	validate_store(alerts, 'alerts');
-    	component_subscribe($$self, alerts, $$value => $$invalidate(13, $alerts = $$value));
+    	component_subscribe($$self, alerts, $$value => $$invalidate(17, $alerts = $$value));
     	validate_store(gameId, 'gameId');
-    	component_subscribe($$self, gameId, $$value => $$invalidate(14, $gameId = $$value));
+    	component_subscribe($$self, gameId, $$value => $$invalidate(18, $gameId = $$value));
     	validate_store(audience, 'audience');
-    	component_subscribe($$self, audience, $$value => $$invalidate(15, $audience = $$value));
+    	component_subscribe($$self, audience, $$value => $$invalidate(19, $audience = $$value));
     	validate_store(whiteAddress, 'whiteAddress');
-    	component_subscribe($$self, whiteAddress, $$value => $$invalidate(16, $whiteAddress = $$value));
+    	component_subscribe($$self, whiteAddress, $$value => $$invalidate(20, $whiteAddress = $$value));
     	validate_store(blackAddress, 'blackAddress');
-    	component_subscribe($$self, blackAddress, $$value => $$invalidate(17, $blackAddress = $$value));
+    	component_subscribe($$self, blackAddress, $$value => $$invalidate(21, $blackAddress = $$value));
     	validate_store(myAddress, 'myAddress');
-    	component_subscribe($$self, myAddress, $$value => $$invalidate(18, $myAddress = $$value));
+    	component_subscribe($$self, myAddress, $$value => $$invalidate(22, $myAddress = $$value));
     	validate_store(connected, 'connected');
-    	component_subscribe($$self, connected, $$value => $$invalidate(19, $connected = $$value));
+    	component_subscribe($$self, connected, $$value => $$invalidate(23, $connected = $$value));
     	validate_store(games, 'games');
-    	component_subscribe($$self, games, $$value => $$invalidate(20, $games = $$value));
+    	component_subscribe($$self, games, $$value => $$invalidate(24, $games = $$value));
     	validate_store(ownedGames, 'ownedGames');
-    	component_subscribe($$self, ownedGames, $$value => $$invalidate(21, $ownedGames = $$value));
+    	component_subscribe($$self, ownedGames, $$value => $$invalidate(25, $ownedGames = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
     	const gameBoard = new Board();
@@ -57771,7 +58265,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	};
 
     	const loadGame = async function (game) {
-    		$$invalidate(3, newGame = false);
+    		$$invalidate(4, newGame = false);
     		await games.loadGame(game.id, game.player2, game.player1);
     	};
 
@@ -57789,7 +58283,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     	const mint = async function () {
     		if (!validMint()) return;
-    		$$invalidate(2, minting = true);
+    		$$invalidate(3, minting = true);
 
     		try {
     			const gameId = await games.mintGame({
@@ -57799,11 +58293,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     			// if there is no gameId something went wrong
     			if (!gameId) {
-    				$$invalidate(2, minting = false);
+    				$$invalidate(3, minting = false);
     				return;
     			}
 
-    			$$invalidate(3, newGame = {
+    			$$invalidate(4, newGame = {
     				id: gameId.toNumber(),
     				player1: newPlayer1Address.toString(),
     				player2: newPlayer2Address.toString()
@@ -57812,14 +58306,24 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			$$invalidate(0, newPlayer1Address = '');
     			$$invalidate(1, newPlayer2Address = '');
     		} catch(err) {
-    			$$invalidate(2, minting = false);
+    			$$invalidate(3, minting = false);
     			console.log(err);
     		}
 
-    		$$invalidate(2, minting = false);
+    		$$invalidate(3, minting = false);
+    	};
+
+    	const addBounty = async function () {
+    		await games.addBounty(bountyGame, newBounty);
+    		$$invalidate(2, newBounty = undefined);
+    		$$invalidate(5, bountyGame = undefined);
+    		$$invalidate(6, settingBounty = false);
     	};
 
     	let newGame;
+    	let bountyGame;
+    	let newBounty;
+    	let settingBounty = false;
 
     	// vars for promoting pawns that make the backline
     	let showPromoteModal = false;
@@ -57903,14 +58407,14 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     			}
     		}
 
-    		$$invalidate(6, winner = ghostBoard.getPieceColor(piece));
+    		$$invalidate(9, winner = ghostBoard.getPieceColor(piece));
     	}
 
     	function trigger() {
-    		$$invalidate(7, pieceSpace = gameBoard.pieceSpace);
-    		$$invalidate(8, history = gameBoard.history);
-    		$$invalidate(9, turn = gameBoard.turn);
-    		$$invalidate(10, palyerInCheck = gameBoard.palyerInCheck);
+    		$$invalidate(10, pieceSpace = gameBoard.pieceSpace);
+    		$$invalidate(11, history = gameBoard.history);
+    		$$invalidate(12, turn = gameBoard.turn);
+    		$$invalidate(13, palyerInCheck = gameBoard.palyerInCheck);
     		whiteCanCastleLong = gameBoard.whiteCanCastleLong;
     		whiteCanCastleShort = gameBoard.whiteCanCastleShort;
     		blackCanCastleLong = gameBoard.blackCanCastleLong;
@@ -57961,13 +58465,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		const row = moveTo[0];
     		const backline = color === 'black' ? row === 7 : row === 0;
     		if (!backline) return '';
-    		$$invalidate(4, showPromoteModal = true);
-    		$$invalidate(5, promoteColor = color);
+    		$$invalidate(7, showPromoteModal = true);
+    		$$invalidate(8, promoteColor = color);
 
     		return new Promise(function (resolve, reject) {
     				promoter.once(function (piece) {
-    					$$invalidate(4, showPromoteModal = false);
-    					$$invalidate(5, promoteColor = undefined);
+    					$$invalidate(7, showPromoteModal = false);
+    					$$invalidate(8, promoteColor = undefined);
     					resolve(piece);
     				});
     			});
@@ -58002,7 +58506,17 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     	function modal_visible_binding(value) {
     		newGame = value;
-    		$$invalidate(3, newGame);
+    		$$invalidate(4, newGame);
+    	}
+
+    	function input_value_binding(value) {
+    		newBounty = value;
+    		$$invalidate(2, newBounty);
+    	}
+
+    	function modal_visible_binding_1(value) {
+    		bountyGame = value;
+    		$$invalidate(5, bountyGame);
     	}
 
     	const click_handler_1 = () => promoter.promote('rook');
@@ -58014,10 +58528,12 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	const click_handler_7 = () => promoter.promote('bishop');
     	const click_handler_8 = () => promoter.promote('queen');
 
-    	function modal_visible_binding_1(value) {
+    	function modal_visible_binding_2(value) {
     		showPromoteModal = value;
-    		$$invalidate(4, showPromoteModal);
+    		$$invalidate(7, showPromoteModal);
     	}
+
+    	const click_handler_9 = ownedGame => $$invalidate(5, bountyGame = ownedGame);
 
     	function input0_value_binding(value) {
     		newPlayer1Address = value;
@@ -58066,7 +58582,11 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		newPlayer2Address,
     		minting,
     		mint,
+    		addBounty,
     		newGame,
+    		bountyGame,
+    		newBounty,
+    		settingBounty,
     		showPromoteModal,
     		promoteColor,
     		winner,
@@ -58089,6 +58609,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		getPromotion,
     		getGhostBoard,
     		validMint,
+    		validBounty,
     		$myColor,
     		$alerts,
     		$gameId,
@@ -58104,20 +58625,24 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     	$$self.$inject_state = $$props => {
     		if ('newPlayer1Address' in $$props) $$invalidate(0, newPlayer1Address = $$props.newPlayer1Address);
     		if ('newPlayer2Address' in $$props) $$invalidate(1, newPlayer2Address = $$props.newPlayer2Address);
-    		if ('minting' in $$props) $$invalidate(2, minting = $$props.minting);
-    		if ('newGame' in $$props) $$invalidate(3, newGame = $$props.newGame);
-    		if ('showPromoteModal' in $$props) $$invalidate(4, showPromoteModal = $$props.showPromoteModal);
-    		if ('promoteColor' in $$props) $$invalidate(5, promoteColor = $$props.promoteColor);
-    		if ('winner' in $$props) $$invalidate(6, winner = $$props.winner);
-    		if ('pieceSpace' in $$props) $$invalidate(7, pieceSpace = $$props.pieceSpace);
-    		if ('history' in $$props) $$invalidate(8, history = $$props.history);
-    		if ('turn' in $$props) $$invalidate(9, turn = $$props.turn);
-    		if ('palyerInCheck' in $$props) $$invalidate(10, palyerInCheck = $$props.palyerInCheck);
+    		if ('minting' in $$props) $$invalidate(3, minting = $$props.minting);
+    		if ('newGame' in $$props) $$invalidate(4, newGame = $$props.newGame);
+    		if ('bountyGame' in $$props) $$invalidate(5, bountyGame = $$props.bountyGame);
+    		if ('newBounty' in $$props) $$invalidate(2, newBounty = $$props.newBounty);
+    		if ('settingBounty' in $$props) $$invalidate(6, settingBounty = $$props.settingBounty);
+    		if ('showPromoteModal' in $$props) $$invalidate(7, showPromoteModal = $$props.showPromoteModal);
+    		if ('promoteColor' in $$props) $$invalidate(8, promoteColor = $$props.promoteColor);
+    		if ('winner' in $$props) $$invalidate(9, winner = $$props.winner);
+    		if ('pieceSpace' in $$props) $$invalidate(10, pieceSpace = $$props.pieceSpace);
+    		if ('history' in $$props) $$invalidate(11, history = $$props.history);
+    		if ('turn' in $$props) $$invalidate(12, turn = $$props.turn);
+    		if ('palyerInCheck' in $$props) $$invalidate(13, palyerInCheck = $$props.palyerInCheck);
     		if ('whiteCanCastleLong' in $$props) whiteCanCastleLong = $$props.whiteCanCastleLong;
     		if ('whiteCanCastleShort' in $$props) whiteCanCastleShort = $$props.whiteCanCastleShort;
     		if ('blackCanCastleLong' in $$props) blackCanCastleLong = $$props.blackCanCastleLong;
     		if ('blackCanCastleShort' in $$props) blackCanCastleShort = $$props.blackCanCastleShort;
-    		if ('validMint' in $$props) $$invalidate(11, validMint = $$props.validMint);
+    		if ('validMint' in $$props) $$invalidate(14, validMint = $$props.validMint);
+    		if ('validBounty' in $$props) $$invalidate(15, validBounty = $$props.validBounty);
     	};
 
     	if ($$props && "$$inject" in $$props) {
@@ -58126,7 +58651,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 
     	$$self.$$.update = () => {
     		if ($$self.$$.dirty[0] & /*newPlayer1Address, newPlayer2Address*/ 3) {
-    			$$invalidate(11, validMint = function () {
+    			$$invalidate(14, validMint = function () {
     				try {
     					// make sure the wallet address is valid
     					$$invalidate(0, newPlayer1Address = getAddress(newPlayer1Address));
@@ -58139,13 +58664,23 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     				return true;
     			});
     		}
+
+    		if ($$self.$$.dirty[0] & /*newBounty*/ 4) {
+    			$$invalidate(15, validBounty = function () {
+    				if (newBounty && newBounty > 0) return true;
+    				return false;
+    			});
+    		}
     	};
 
     	return [
     		newPlayer1Address,
     		newPlayer2Address,
+    		newBounty,
     		minting,
     		newGame,
+    		bountyGame,
+    		settingBounty,
     		showPromoteModal,
     		promoteColor,
     		winner,
@@ -58154,6 +58689,7 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		turn,
     		palyerInCheck,
     		validMint,
+    		validBounty,
     		$myColor,
     		$alerts,
     		$gameId,
@@ -58169,10 +58705,13 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		unloadGame,
     		logout,
     		mint,
+    		addBounty,
     		dropPiece,
     		promoter,
     		click_handler,
     		modal_visible_binding,
+    		input_value_binding,
+    		modal_visible_binding_1,
     		click_handler_1,
     		click_handler_2,
     		click_handler_3,
@@ -58181,7 +58720,8 @@ HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     		click_handler_6,
     		click_handler_7,
     		click_handler_8,
-    		modal_visible_binding_1,
+    		modal_visible_binding_2,
+    		click_handler_9,
     		input0_value_binding,
     		input1_value_binding
     	];

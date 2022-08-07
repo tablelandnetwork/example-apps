@@ -793,6 +793,12 @@
 
     return true;
   };
+  $: validBounty = function () {
+    if (newBounty && newBounty > 0) return true;
+
+    return false;
+  };
+
   const mint = async function () {
     if (!validMint()) return;
 
@@ -824,7 +830,17 @@
     minting = false;
   };
 
+  const addBounty = async function () {
+    await games.addBounty(bountyGame, newBounty);
+    newBounty = undefined;
+    bountyGame = undefined;
+    settingBounty = false;
+  };
+
   let newGame;
+  let bountyGame;
+  let newBounty;
+  let settingBounty = false;
 
   // vars for promoting pawns that make the backline
   let showPromoteModal = false;
@@ -1031,6 +1047,35 @@
   </Modal>
   {/if}
 
+  {#if bountyGame}
+  <Modal bind:visible={bountyGame} title="Add to the bounty">
+
+    <ModalBody>
+      Add to the bounty for this game
+      <div class="grid grid-cols-3">
+        <div class="col-span-2">
+          <Input placeholder="value in ETH" type="number" className="false" bind:value="{newBounty}" />
+        </div>
+        <div class="align-middle">
+          {#if settingBounty}
+          <Spinner label="Adding..." />
+          {/if}
+
+          {#if !settingBounty}
+          <Button type="primary" small on:click="{addBounty}" disabled="{!validBounty()}">
+            Submit
+          </Button>
+          {/if}
+        </div>
+      </div>
+
+      The bounty is paid in full, minus gas, to the winner of the game.
+      Note the winner must be set on chain by the token owner, it is not automatically assigned by this client app.
+    </ModalBody>
+
+  </Modal>
+  {/if}
+
   <Modal bind:visible={showPromoteModal} title="Choose Promotion">
 
     <ModalBody>
@@ -1153,6 +1198,7 @@
       <p class="truncate">
         Game ID: <span on:click="{loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
       </p>
+      <p class="truncate">Game Bounty: {utils.formatEther(game.bounty)}</p>
       <p class="truncate">Player 1: {game.player1}</p>
       <p class="truncate">Player 2: {game.player2}</p>
       {/each}
@@ -1169,7 +1215,12 @@
           {ownedGame.id}
         </span>
       </p>
-      <p class="truncate">Game Bounty: {ownedGame.bounty}</p>
+      <p class="truncate">
+        Game Bounty: {utils.formatEther(ownedGame.bounty)}
+        <span on:click="{() => bountyGame = ownedGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+          Add Bounty
+        </span>
+      </p>
       <p class="truncate">Player 1: {ownedGame.player1}</p>
       <p class="truncate">Player 2: {ownedGame.player2}</p>
       <p class="truncate">Winner: {ownedGame.winner}</p>
