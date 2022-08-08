@@ -19,16 +19,18 @@ const moveWaitDiration = 5000;
 // TODO: enable adding a bounty to a game
 
 // internals
-let _audience;
-let _tableland;
-let _gameId;
 let _address;
-let _opponentAddress;
-let _myColor;
-let _moves;
-let _white;
+let _audience;
 let _black;
+let _bounty;
+let _gameId;
 let _intervalId;
+let _moves;
+let _myColor;
+let _owner;
+let _opponentAddress;
+let _tableland;
+let _white;
 
 // RPC responds with rows and columns in separate arrays, this will combine to an array of objects
 const parseResponse = function (data: {rows: any[], columns: {name: string}[]}) {
@@ -62,9 +64,17 @@ myColor.subscribe(color => _myColor = color);
 export const myAddress = writable('');
 myAddress.subscribe(address => _address = address);
 
-// Flag that tracks if the user is one of the players, or just watching the game
+// Flag that tracks if the user just watching the game
 export const audience = writable(false);
 audience.subscribe(isAudience => _audience = isAudience);
+
+// Flag that tracks if the user is the owner of the game
+export const owner = writable(false);
+owner.subscribe(isOwner => _owner = isOwner);
+
+export const bounty = writable('');
+owner.subscribe(newBounty => _bounty = newBounty);
+
 
 const { subscribe: movesSubscribe, set: setMoves, update: updateMoves } = writable([]);
 movesSubscribe(mvs => _moves = mvs);
@@ -149,6 +159,27 @@ export const games = {
 
       // TODO: This is a naive way of resync the UI's state with the table and chain state
       await games.findGames();
+    } catch (err) {
+      console.log(err);
+      alerts.addAlert(err.message, 'error');
+    }
+  },
+  certifyWinner: async function (tokenId, color: string) {
+    try {
+      let winnerAddress;
+      if (color === 'white') winnerAddress = _white;
+      if (color === 'black') winnerAddress = _black;
+
+      // should never end up throwing this, but checking just in case
+      if (!winnerAddress) throw new Error('cannot get winner address');
+
+      const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, tokenAbi, _tableland.signer);
+      const tx = await tokenContract.setWinner(BigNumber.from(tokenId), winnerAddress);
+
+      await tx.wait();
+
+      // reload to update UI
+      await games.loadGame(tokenId, _black, _white);
     } catch (err) {
       console.log(err);
       alerts.addAlert(err.message, 'error');
@@ -259,6 +290,14 @@ export const games = {
       // reset the moves so UI can update
       setMoves([]);
       moves.unlistenForMoves();
+      bounty.set('');
+
+      const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, tokenAbi, _tableland.signer);
+      const tokenOwner = await tokenContract.ownerOf(BigNumber.from(loadGameId));
+
+      owner.set(_address === tokenOwner);
+
+      const game = await tokenContract.getGame(BigNumber.from(loadGameId));
 
       if (_address === white || _address === black) {
         _opponentAddress = white === _address ? black : white;
@@ -266,6 +305,8 @@ export const games = {
 
         const color = white === _address ? 'white' : 'black';
         myColor.update(c => color);
+      } else if (_address === tokenOwner) {
+        audience.set(false);
       } else {
         audience.set(true);
       }
@@ -275,17 +316,19 @@ export const games = {
 
       const res = await _tableland.read(sqlStatements.loadGame(loadGameId, black, white));
 
-      const game = parseResponse(res);
-      setMoves(game.map(move => move.move));
+      const gameMoves = parseResponse(res);
+      setMoves(gameMoves.map(move => move.move));
+
+      const currentBounty = ethers.utils.parseEther(game.bounty.toString()).toString();
+      bounty.set(currentBounty === '0' ? '' : currentBounty);
 
       if (_audience) {
         // If the user is in the audience listen forever
         moves.listenForMoves(black, white, true);
-      } else if (game.length && game[game.length - 1].player_address === _address) {
+      } else if (gameMoves.length && gameMoves[gameMoves.length - 1].player_address === _address) {
         // If this player made the last move, start waiting for the other player to make their move
         moves.listenForMoves(black, white);
       }
-
 
       const gameUrl = new URL(window.location as any);
       gameUrl.searchParams.set('white', white);

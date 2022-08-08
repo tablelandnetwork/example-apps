@@ -721,9 +721,11 @@
     alerts,
     audience,
     blackAddress,
+    bounty,
     connected,
     gameId,
     games,
+    owner,
     ownedGames,
     init,
     moves,
@@ -835,6 +837,10 @@
     newBounty = undefined;
     bountyGame = undefined;
     settingBounty = false;
+  };
+
+  const certifyWinner = async function (gameId) {
+    await games.certifyWinner(gameId, winner);
   };
 
   let newGame;
@@ -1041,7 +1047,7 @@
         your game
       </span>.
       Share this with the the Wallets of the players you specified.
-      You can now set a bounty on the game, which will be paid in full to the winner.
+      You can now set a bounty on the game, which will be paid in full to the winner when you certify the game outcome.
     </ModalBody>
 
   </Modal>
@@ -1070,7 +1076,7 @@
       </div>
 
       The bounty is paid in full, minus gas, to the winner of the game.
-      Note the winner must be set on chain by the token owner, it is not automatically assigned by this client app.
+      Note the winner must be certified on chain by the token owner, it is not automatically assigned by this client app.
     </ModalBody>
 
   </Modal>
@@ -1136,26 +1142,33 @@
 
         {#if typeof $gameId === 'number'}
 
-          Game ID: {$gameId} -
+          Game ID: {$gameId}
 
-          {#if !winner}
+          {#if $audience && !winner}
+          <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
+          {/if}
 
-            {#if $audience}
-            <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
+          {#if $owner}
+          <p class="text-sm">
+            You are the owner of this game.
+            {#if winner && $bounty}
+            <span on:click="{() => certifyWinner($gameId)}" class="cursor-pointer hover:underline text-blue-300">
+              Certify Winner
+            </span>
             {/if}
+          </p>
+          {/if}
 
-            {#if !$audience}
-              {#if  turn === $myColor}
-              <b>Your Turn</b>
-              {/if}
-              {#if  turn !== $myColor}
-              <b>Opponent's Turn</b>
-              {/if}
-              {#if palyerInCheck}
-              <span class="text-red">{turn} in check!</span>
-              {/if}
+          {#if $myColor && !winner}
+            {#if  turn === $myColor}
+            <b>Your Turn</b>
             {/if}
-
+            {#if  turn !== $myColor}
+            <b>Opponent's Turn</b>
+            {/if}
+            {#if palyerInCheck}
+            <span class="text-red">{turn} in check!</span>
+            {/if}
           {/if}
 
           {#if winner}
@@ -1267,13 +1280,13 @@
 
     </div>
     <div class="history">
-      {#if !$audience}
-      <h3 class="max-w-sm">
+      {#if $myColor}
+      <h3>
         You are playing as <b>{$myColor}</b>
       </h3>
       {/if}
 
-      <h3>Moves</h3>
+      <h3 class="w-64">Moves</h3>
 
       <div class="flex items-start">
         <table class="move-table">
