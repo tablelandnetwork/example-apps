@@ -107,3 +107,12 @@ Then, from within your project folder:
 npm run build
 surge public my-project.surge.sh
 ```
+
+
+# Deployments
+
+### Polygon Mumbai
+
+Chess Tableland deployed to: 0x0a8A783058C05CA93f38780F0fEC2d869142eDFf By account: 0xd535bAd504CDd77e2C51dE26F416693DF7a01ac8
+Chess Token deployed to: 0x4035ce0Df8440bd07BEf39306e4a8D785C0e13a1 By account: 0xd535bAd504CDd77e2C51dE26F416693DF7a01ac8
+Chess Policy deployed to: 0x835d51079c74cEfFbab0AA717839f4400C06b28b By account: 0xd535bAd504CDd77e2C51dE26F416693DF7a01ac8
