@@ -800,6 +800,11 @@
 
     return false;
   };
+  $: canAddBounty = function (game) {
+    if (game.player2 === $myAddress) return false;
+    if (game.player1 === $myAddress) return false;
+    return true;
+  };
 
   const mint = async function () {
     if (!validMint()) return;
@@ -1209,9 +1214,9 @@
       {#each $games as game}
       <p class="w-full border border-solid-bottom border-gray-300"></p>
       <p class="truncate">
-        Game ID: <span on:click="{loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
+        Game ID: <span on:click="{() => loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
       </p>
-      <p class="truncate">Game Bounty: {utils.formatEther(game.bounty)}</p>
+      <p class="truncate">Game Bounty: {game.bounty && utils.formatEther(game.bounty)}</p>
       <p class="truncate">Player 1: {game.player1}</p>
       <p class="truncate">Player 2: {game.player2}</p>
       {/each}
@@ -1229,10 +1234,12 @@
         </span>
       </p>
       <p class="truncate">
-        Game Bounty: {utils.formatEther(ownedGame.bounty)}
+        Game Bounty: {ownedGame.bounty && utils.formatEther(ownedGame.bounty)}
+        {#if canAddBounty(ownedGame)}
         <span on:click="{() => bountyGame = ownedGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
           Add Bounty
         </span>
+        {/if}
       </p>
       <p class="truncate">Player 1: {ownedGame.player1}</p>
       <p class="truncate">Player 2: {ownedGame.player2}</p>
