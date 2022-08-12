@@ -7,8 +7,10 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 struct TablelandData {
     ITablelandTables _tableland;
     uint256 _metadataTableId;
+    uint256 _attributesTableId;
     uint256 _movesTableId;
     string _metadataTable;
+    string _attributesTable;
     string _movesTable;
 }
 
@@ -18,47 +20,93 @@ library ChessTableland {
         self._tableland = ITablelandTables(registry);
     }
     /*
-     *  Create a table to store metadata for the Chess Token
+     *  Create a tables to store metadata for the Chess Token
      */
-    function _initCreateMetadata(TablelandData storage self) public {
+    function _initCreateTables(TablelandData storage self) public {
         require(self._metadataTableId == 0, "Chess Token table already exists");
+        require(self._attributesTableId == 0, "Chess Token attributes table already exists");
+        require(self._movesTableId == 0, "Chess Moves table already exists");
 
-        string memory prefix = "chess_token_";
+
+        /*
+         *  CREATE TABLE chess_token_<chainId> (
+         *      id INTEGER PRIMARY KEY,
+         *      conceded INT,
+         *      bounty REAL,
+         *      thumb TEXT,
+         *      image TEXT,
+         *      animation_url TEXT
+         *  );
+         */
+        string memory metadataPrefix = "chess_token_";
         self._metadataTableId = self._tableland.createTable(
             address(this),
             string.concat(
                 "CREATE TABLE ",
-                prefix,
+                metadataPrefix,
                 Strings.toString(block.chainid),
-                " (id int,",
-                " player1 text,",
-                " player2 text,",
-                " conceeded int,",
-                " winner text,",
-                " bounty real);"
+                "(",
+                " id INTEGER PRIMARY KEY,",
+                " conceded INT,",
+                " bounty REAL,",
+                " thumb TEXT,",
+                " image TEXT,",
+                " animation_url TEXT",
+                ");"
             )
         );
 
         self._metadataTable = string.concat(
-            prefix,
+            metadataPrefix,
             Strings.toString(block.chainid),
+            "_",
             Strings.toString(self._metadataTableId)
         );
-    }
 
-    /*
-     *  Create a table to store the moves of the Chess games,
-     *  which are the content that makes up the chess tokens
-     */
-    function _initCreateMoves(TablelandData storage self) public {
-        require(self._movesTableId == 0, "Chess Moves table already exists");
+        /*
+         *  CREATE TABLE chess_token_attributes_<chainId> (
+         *      type TEXT,
+         *      value TEXT,
+         *      game_id INTEGER,
+         *      FOREIGN KEY(game_id) REFERENCES test(id)
+         *  );
+         */
+        string memory attributesPrefix = "chess_token_attributes_";
+        self._attributesTableId = self._tableland.createTable(
+            address(this),
+            string.concat(
+                "CREATE TABLE ",
+                attributesPrefix,
+                Strings.toString(block.chainid),
+                "(",
+                " type TEXT,",
+                " value TEXT,",
+                " game_id INTEGER",
+                " FOREIGN KEY(game_id) REFERENCES test(id)"
+                ");"
+            )
+        );
 
-        string memory prefix = "chess_moves_";
+        self._attributesTable = string.concat(
+            attributesPrefix,
+            Strings.toString(block.chainid),
+            "_",
+            Strings.toString(self._attributesTableId)
+        );
+
+        /*
+         *  CREATE TABLE chess_moves_<chainId> (
+         *      player_address TEXT,
+         *      game_id INT,
+         *      move TEXT
+         *  );
+         */
+        string memory movesPrefix = "chess_moves_";
         self._movesTableId = self._tableland.createTable(
             address(this),
             string.concat(
                 "CREATE TABLE ",
-                prefix,
+                movesPrefix,
                 Strings.toString(block.chainid),
                 "(player_address TEXT,",
                 "game_id INT,",
@@ -66,9 +114,14 @@ library ChessTableland {
             )
         );
 
+        /*
+         *  Create a table to store the moves of the Chess games,
+         *  which are the content that makes up the chess tokens
+         */
         self._movesTable = string.concat(
-            prefix,
+            movesPrefix,
             Strings.toString(block.chainid),
+            "_",
             Strings.toString(self._movesTableId)
         );
     }
@@ -88,39 +141,59 @@ library ChessTableland {
         self._tableland.lockController(address(this), self._movesTableId);
     }
 
+    /* This makes 4 insert statements across 2 tables. Of note is that since these are all
+     * happening in the same block transaction, the validator will do an all or nothing transaction
+     * for the materialization of the data in the database they maintain.
+     */
     function _insertGame(TablelandData storage self, uint256 tokenId, address player1, address player2) public {
+        string memory tokenIdString = Strings.toString(tokenId);
+        string memory player1AddressString = _addressToString(player1);
+        string memory player2AddressString = _addressToString(player2);
+        /*
+         * insert a single row for the game's metadata
+         */
         self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
             "INSERT INTO ",
             self._metadataTable,
             " (id, player1, player2, bounty) VALUES (",
-            Strings.toString(tokenId),
-            ",",
-            _addressToString(player1),
-            ",",
-            _addressToString(player2),
-            ",",
+            tokenIdString,
+            ",'",
+            player1AddressString,
+            "','",
+            player2AddressString,
+            "',",
             "0);"
+        ));
+
+        /*
+         * insert three rows for the game metadata attributes.
+         * Note the `winner` attribute does not exist until the game has a
+         * winner set by the owner.
+         */
+        self._tableland.runSQL(address(this), self._attributesTableId, string.concat(
+            _insertAttribute(self._attributesTable, tokenIdString, 'player1', player1AddressString),
+            _insertAttribute(self._attributesTable, tokenIdString, 'player2', player2AddressString),
+            _insertAttribute(self._attributesTable, tokenIdString, 'bounty', '0')
         ));
     }
 
     function _setBounty(TablelandData storage self, uint256 tokenId, uint256 bounty) public {
         self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
             "UPDATE ",
-            self._metadataTable,
-            " SET bounty = ",
+            self._attributesTable,
+            " SET value = ",
             Strings.toString(bounty),
-            " WHERE id = ",
+            " WHERE game_id = ",
             Strings.toString(tokenId),
-            ";"
+            " AND type = 'bounty';"
         ));
     }
 
-    function _concede(TablelandData storage self, uint256 tokenId, address winner) public {
+    function _concede(TablelandData storage self, uint256 tokenId) public {
         self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
             "UPDATE ",
             self._metadataTable,
-            " SET conceeded = 1, winner = ",
-            _addressToString(winner),
+            " SET conceded = 1",
             " WHERE id = ",
             Strings.toString(tokenId),
             ";"
@@ -129,24 +202,69 @@ library ChessTableland {
 
     function _setWinner(TablelandData storage self, uint256 tokenId, address winner) public {
         self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
-            "UPDATE ",
-            self._metadataTable,
-            " SET winner = ",
-            _addressToString(winner),
-            " WHERE id = ",
-            Strings.toString(tokenId),
-            ";"
+            "INSERT INTO ", self._attributesTable, " (type, value, game_id) VALUES (",
+                "'winner',",
+                _addressToString(winner), ",",
+                Strings.toString(tokenId),
+            ");"
         ));
     }
 
-    function _getMetadataURI(TablelandData storage self, uint256 tokenId, string memory baseURI) public view returns(string memory) {
+    function _getMetadataURI(uint256 tokenId, string memory baseURI)
+        public
+        pure
+        returns(string memory)
+    {
+
+        /*
+         *  SELECT json_object(
+         *      'name','Chess Game '||id,
+         *      'external_url','https://github.com/tablelandnetwork/example-apps/chess',
+         *      'image',image,
+         *      'thumb',thumb,
+         *      'animation_url',animation_url,
+         *      'attributes',json_group_array(
+         *          json_object('trait_type',type,'value',value)
+         *      )
+         *  )
+         *   FROM test JOIN attrs ON test.id = attrs.game_id
+         *   WHERE id = <tokenIdString>;
+         */
+        string memory tokenIdString = Strings.toString(tokenId);
         return string.concat(
             baseURI,
-            "SELECT * FROM ",
-            self._metadataTable,
-            " WHERE id = '",
-            Strings.toString(tokenId),
-            "'&mode=json"
+            "SELECT json_object(",
+                "'name','Chess Game '||id,",
+                "'external_url','https://github.com/tablelandnetwork/example-apps/chess',",
+                "'image',image,",
+                "'thumb',thumb,",
+                "'animation_url',animation_url,",
+                "'attributes',json_group_array(",
+                    "json_object('trait_type',type,'value',value)",
+                ")",
+            ")",
+            " FROM test JOIN attrs ON test.id = attrs.game_id"
+            " WHERE id = ", tokenIdString, ";"
+            "&mode=json"
+        );
+    }
+
+    function _insertAttribute(
+        string memory tableName,
+        string memory gameId,
+        string memory attrType,
+        string memory value
+    )
+        internal
+        pure
+        returns(string memory)
+    {
+        return string.concat(
+            "INSERT INTO ", tableName, " (type, value, game_id) VALUES (",
+                gameId, ",",
+                attrType, ",",
+                value,
+            ");"
         );
     }
 

@@ -33,16 +33,10 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     }
 
     /*
-     *  Create a table to store metadata for the Chess Token
+     *  Create a tables to store metadata and moves for the Chess Token
      */
     function initCreate() external onlyOwner() {
-        ChessTableland._initCreateMetadata(_tablelandData);
-
-        /*
-         *  Create a table to store the moves of the Chess games,
-         *  which are the content that makes up the chess tokens
-         */
-        ChessTableland._initCreateMoves(_tablelandData);
+        ChessTableland._initCreateTables(_tablelandData);
     }
 
     /*
@@ -57,6 +51,10 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
         return _tablelandData._metadataTableId;
     }
 
+    function getAttributesTableId() public view returns(uint256) {
+        return _tablelandData._attributesTableId;
+    }
+
     function getMovesTableId() public view returns(uint256) {
         return _tablelandData._movesTableId;
     }
@@ -67,7 +65,11 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-        return ChessTableland._getMetadataURI(_tablelandData, tokenId, _baseURI());
+        return ChessTableland._getMetadataURI(tokenId, _baseURI());
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseURIString;
     }
 
     function mintGame(address to, address player1, address player2)
@@ -140,6 +142,7 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     {
         require(_games[tokenId].player1 > address(0), "game does not exist");
         require(_games[tokenId].player2 > address(0), "game does not exist");
+        require(_games[tokenId].winner == address(0), "game already has a winner");
         require(
             _games[tokenId].player1 == msg.sender || _games[tokenId].player2 == msg.sender,
             "sender must be a player"
@@ -147,38 +150,49 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
 
         if (_games[tokenId].player1 == msg.sender) {
             _games[tokenId].winner = payable(_games[tokenId].player2);
-            _payWinner(tokenId);
         }
 
         if (_games[tokenId].player2 == msg.sender) {
             _games[tokenId].winner = payable(_games[tokenId].player1);
-            _payWinner(tokenId);
         }
 
-        ChessTableland._concede(_tablelandData, tokenId, _games[tokenId].winner);
+        ChessTableland._concede(_tablelandData, tokenId);
     }
 
-    function setWinner(uint256 tokenId, address payable winner)
+    function setWinner(uint256 tokenId, address winner)
         public
     {
         require(_games[tokenId].player1 > address(0), "game does not exist");
         require(_games[tokenId].player2 > address(0), "game does not exist");
-        require(ownerOf(tokenId) == msg.sender, "sender must be owner");
-
+        require(ownerOf(tokenId) == msg.sender, "sender must be owner of game");
+        require(_games[tokenId].winner == address(0), "game already has a winner");
         require(
             _games[tokenId].player1 == winner || _games[tokenId].player2 == winner,
             "winner must be a player"
         );
 
-        _games[tokenId].winner = winner;
+        ChessTableland._setWinner(_tablelandData, tokenId, _games[tokenId].winner);
+
+        _games[tokenId].winner = payable(winner);
 
         _deactivatePlayerGame(tokenId, _games[tokenId].player1);
         _deactivatePlayerGame(tokenId, _games[tokenId].player2);
-
-        _payWinner(tokenId);
-
-        ChessTableland._setWinner(_tablelandData, tokenId, _games[tokenId].winner);
     }
+
+    // use the pattern where the winner claims the bounty
+    function claimBounty(uint256 tokenId)
+        public
+    {
+        require(_games[tokenId].winner != address(0), "cannot payout until there is a winner");
+        require(_games[tokenId].winner == payable(msg.sender), "cannot claim unless you are the payable(winner)");
+        require(_games[tokenId].bounty > 0, "there is no bounty for this game");
+
+        uint256 bounty = _games[tokenId].bounty;
+        // set zero first to avoid reentrancy
+        _games[tokenId].bounty = 0;
+        payable(msg.sender).transfer(bounty);
+    }
+
 
     // Remove the `tokenId` game from this player's list of games
     function _deactivatePlayerGame(uint256 tokenId, address player)
@@ -228,22 +242,4 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     {
         return _playerGames[player].length;
     }
-
-    function _payWinner(uint256 tokenId)
-        private
-    {
-        require(_games[tokenId].winner != address(0), "cannot payout until there is a winner");
-        uint bounty = _games[tokenId].bounty;
-        _games[tokenId].bounty = 0;
-
-        if (bounty > 0) {
-            // TODO: there is a potential security risk here if winner is a contract. Using send
-            //       and transfer aren't recommended because of gas cost and changes in Istanbul
-            (bool paid, ) = _games[tokenId].winner.call{value: bounty}("");
-            if (!paid) {
-                _games[tokenId].bounty = bounty;
-            }
-        }
-    }
-
 }

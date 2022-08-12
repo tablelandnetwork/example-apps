@@ -26,8 +26,7 @@ module.exports.deployAll = async function () {
   });
   const chessTokens = await ChessTokenFactory.deploy(validatorService, registry.address);
   await chessTokens.deployed();
-  await chessTokens.initCreateMetadata();
-  await chessTokens.initCreateMoves();
+  await chessTokens.initCreate();
 
   const ChessPolicyFactory = await ethers.getContractFactory("ChessPolicy");
   const chessPolicy = await ChessPolicyFactory.deploy(chessTokens.address);

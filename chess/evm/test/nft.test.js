@@ -180,18 +180,23 @@ describe("Chess Game NFT Contract", function () {
     const winnerTx = await chessTokens
       .connect(account0)
       .setWinner(gameId, account1.address);
-
     await winnerTx.wait()
+
+    const claimTx = await chessTokens
+      .connect(account1)
+      .claimBounty(gameId);
+
+    await claimTx.wait()
 
     const accnt1Balance = await hre.network.provider.send("eth_getBalance", [
       account1.address,
     ]);
 
-    // Check that the account 0 balance is less then it's initial value minus the bounty
-    // note that difference is the gas cost
-    await expect(BigNumber.from(accnt1Balance).eq(
-      // default starting value minus bounty (in wei)
-      BigNumber.from("10010000000000000000000")
+    // Check that the account 1 balance is it's initial value plus the bounty
+    // minus the gas cost of claiming
+    expect(BigNumber.from(accnt1Balance).gt(
+      // default starting value plus bounty minus gas will be greater than this
+      BigNumber.from("10009000000000000000000") // in wei
     )).to.equal(true);
 
     const game = await chessTokens
@@ -234,15 +239,21 @@ describe("Chess Game NFT Contract", function () {
 
     await concedeTx.wait();
 
+    const claimTx = await chessTokens
+      .connect(account2)
+      .claimBounty(gameId);
+
+    await claimTx.wait()
+
     const accnt2Balance = await hre.network.provider.send("eth_getBalance", [
       account2.address,
     ]);
 
-    // Check that the account 0 balance is less then it's initial value minus the bounty
-    // note that difference is the gas cost
-    expect(BigNumber.from(accnt2Balance).eq(
-      // default starting value minus bounty (in wei)
-      BigNumber.from("10010000000000000000000")
+    // Check that the account 2 balance is it's initial value plus the bounty
+    // minus the gas cost of claiming
+    expect(BigNumber.from(accnt2Balance).gt(
+      // default starting value plus bounty minus gas will be greater than this
+      BigNumber.from("10009000000000000000000") // in wei
     )).to.equal(true);
   });
 
