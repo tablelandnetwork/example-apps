@@ -80,6 +80,14 @@ contract CanvasGame is
         )
       );
 
+      _metadataTable = string.concat(
+        _tablePrefix,
+        "_",
+        Strings.toString(block.chainid),
+        "_",
+        Strings.toString(_metadataTableId)
+      );
+
       return _metadataTableId;
     }
 

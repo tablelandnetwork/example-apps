@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 describe("CanvasGame", function () {
   let accounts: SignerWithAddress[];
@@ -16,8 +16,16 @@ describe("CanvasGame", function () {
     await registry.connect(accounts[0]).initialize("http://localhost:8080/");
 
     const CanvasGame = await ethers.getContractFactory("CanvasGame");
-    canvasGame = await CanvasGame.deploy(registry.address);
+    canvasGame = await upgrades.deployProxy(CanvasGame, [
+      "https://testnet.tableland.network/query?s=",
+      "not.implemented.com"
+    ], {
+      kind: "uups",
+    });
+
     await canvasGame.deployed();
+
+    await canvasGame.connect(accounts[0]).createMetadataTable(registry.address);
   });
 
   it("Should allow minting", async function () {
@@ -58,10 +66,11 @@ describe("CanvasGame", function () {
     const tokenId = transferEvent.args!.tokenId;
 
     const statement =
-      "UPDATE canvas_31337_1 SET x = 10 AND y = 10 WHERE id = 0;";
+      "UPDATE canvas_31337_1 SET x = 10, y = 10 WHERE id = 0;";
 
     // TODO: this fails with `expected [] to equal []` because Array literals aren't equal
-    //       I can't find a way to change the comparison logic for emit tests
+    //       I can't find a way to change the comparison logic for emit tests.
+    //       Also, can't find a way to test each individual arg.
     await expect(canvasGame.connect(accounts[1]).makeMove(tokenId, 10, 10))
       .to.emit(registry, "RunSQL")
       .withArgs(canvasGame.address, true, 1, statement, [
