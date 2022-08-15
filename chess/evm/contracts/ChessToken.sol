@@ -65,7 +65,7 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-        return ChessTableland._getMetadataURI(tokenId, _baseURI());
+        return ChessTableland._getMetadataURI(_tablelandData, tokenId, _baseURI());
     }
 
     function _baseURI() internal view virtual override returns (string memory) {

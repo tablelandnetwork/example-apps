@@ -78,11 +78,13 @@ library ChessTableland {
                 "CREATE TABLE ",
                 attributesPrefix,
                 Strings.toString(block.chainid),
-                "(",
+                " (",
                 " type TEXT,",
                 " value TEXT,",
                 " game_id INTEGER",
-                " FOREIGN KEY(game_id) REFERENCES test(id)"
+                // NOTE: this something like " FOREIGN KEY(game_id) REFERENCES test(id)"
+                //       could make sense here, but this is not supported in the Tableland
+                //       SQL spec as of Aug. 2022
                 ");"
             )
         );
@@ -155,14 +157,13 @@ library ChessTableland {
         self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
             "INSERT INTO ",
             self._metadataTable,
-            " (id, player1, player2, bounty) VALUES (",
-            tokenIdString,
-            ",'",
-            player1AddressString,
-            "','",
-            player2AddressString,
-            "',",
-            "0);"
+            " (id, conceded, bounty, thumb, image, animation_url) VALUES (",
+            tokenIdString, ",",
+            "0,0,", // set conceded and bounty to default of 0
+            // TODO: need to put default images on IPFS for thumb and image, then
+            //       build an onlyOwner contract to set the animation_url
+            "'ipfs://thumb','ipfs://image','ipfs://animation_url'",
+            ");"
         ));
 
         /*
@@ -210,9 +211,9 @@ library ChessTableland {
         ));
     }
 
-    function _getMetadataURI(uint256 tokenId, string memory baseURI)
+    function _getMetadataURI(TablelandData storage self, uint256 tokenId, string memory baseURI)
         public
-        pure
+        view
         returns(string memory)
     {
 
@@ -243,8 +244,9 @@ library ChessTableland {
                     "json_object('trait_type',type,'value',value)",
                 ")",
             ")",
-            " FROM test JOIN attrs ON test.id = attrs.game_id"
-            " WHERE id = ", tokenIdString, ";"
+            " FROM ", self._metadataTable, " JOIN ", self._attributesTable, " ON ",
+            self._metadataTable, ".id = ", self._attributesTable, ".game_id"
+            " WHERE id = ", tokenIdString,
             "&mode=json"
         );
     }

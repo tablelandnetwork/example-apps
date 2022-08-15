@@ -6,7 +6,7 @@ import { connect, ConnectOptions } from '@tableland/sdk';
 import chessToken from '../evm/artifacts/contracts/ChessToken.sol/ChessToken.json';
 
 // globally unique tablename that all players use
-const MOVES_TABLENAME = 'chess_moves_31337_3';
+const MOVES_TABLENAME = 'chess_moves_31337_4';
 const TOKEN_CONTRACT_ADDRESS = '0x71C95911E9a5D330f4D621842EC243EE1343292e';
 const tokenAbi = chessToken.abi;
 const TOKEN_TABLENAME = 'chess_token_31337_2';
