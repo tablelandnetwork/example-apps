@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/chess"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "npm"
+    directory: "/gila/frontend"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "npm"
+    directory: "/gila/backend"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "npm"
+    directory: "/loot-extension"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "npm"
+    directory: "/tableland-todo"
+    schedule:
+      interval: "daily"
