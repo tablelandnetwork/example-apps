@@ -70,7 +70,8 @@ describe("CanvasGame", function () {
 
     // TODO: this fails with `expected [] to equal []` because Array literals aren't equal
     //       I can't find a way to change the comparison logic for emit tests.
-    //       Also, can't find a way to test each individual arg.
+    // UPDATE: once this issue https://github.com/TrueFiEng/Waffle/issues/245
+    //         is fixed this test should pass
     await expect(canvasGame.connect(accounts[1]).makeMove(tokenId, 10, 10))
       .to.emit(registry, "RunSQL")
       .withArgs(canvasGame.address, true, 1, statement, [
