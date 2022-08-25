@@ -1,4 +1,4 @@
-const { network, baseURI } = require("hardhat");
+const { network, baseURI, appURI } = require("hardhat");
 const { proxies } = require("@tableland/evm/proxies.js");
 
 
@@ -24,7 +24,8 @@ const deploy = async function () {
       ChessTableland: chessTablelandLib.address
     }
   });
-  const chessToken = await ChessToken.connect(account).deploy(baseURI, registryAddress);
+  console.log("app uri", appURI);
+  const chessToken = await ChessToken.connect(account).deploy(baseURI, registryAddress, appURI);
   await chessToken.deployed();
   await chessToken.initCreate();
 

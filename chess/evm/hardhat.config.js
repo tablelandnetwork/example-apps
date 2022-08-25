@@ -94,12 +94,29 @@ module.exports = {
     "optimism-kovan-staging":
       "https://staging.tableland.network/query?s=",
     localhost: "http://localhost:8080/query?s=",
+  },
+  appURIs: {
+    // mainnets
+    ethereum: "https://tableland.network/query?s=",
+    optimism: "https://tableland.network/query?s=",
+    polygon: "https://tableland.network/query?s=",
+    // testnets
+    "ethereum-goerli": "https://testnet.tableland.network/query?s=",
+    "optimism-kovan": "https://testnet.tableland.network/query?s=",
+    "polygon-mumbai": "https://testnet.tableland.network/query?s=",
+    // devnets
+    "optimism-kovan-staging":
+      "https://staging.tableland.network/query?s=",
+    localhost: "http://localhost:3000/",
   }
 };
 
 
 extendEnvironment(hre => {
   // Get base URI for user-selected network
-  const uris = hre.userConfig.baseURIs;
-  hre.baseURI = uris[hre.network.name];
+  const baseUris = hre.userConfig.baseURIs;
+  hre.baseURI = baseUris[hre.network.name];
+
+  const appUris = hre.userConfig.appURIs;
+  hre.appURI = appUris[hre.network.name];
 });

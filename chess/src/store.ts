@@ -48,6 +48,7 @@ const parseResponse = function (data: {rows: any[], columns: {name: string}[]}) 
 export const gameId = writable('');
 export const whiteAddress = writable('');
 export const blackAddress = writable('');
+export const autoPlay = writable(false);
 
 // We want to make the game id available to the methods in the store.
 // afaict Svelte best practices is to have a mutable var in the file's scope that is updated via subscribe.

@@ -735,6 +735,12 @@
   } from './store';
 
   const gameBoard = new Board();
+  let autoPlay;
+
+  onMount(function () {
+    const params = new URLSearchParams(location.search);
+    autoPlay = !!params.get('auto'); 
+  })
 
   const connect = async function () {
     moves.subscribe(async mvs => {
@@ -1042,292 +1048,319 @@
 </script>
 
 <main class="relative">
+  {#if autoPlay}
+    <div class="flex items-start mt-8">
+      <div class="chessboard">
 
-  {#if newGame}
-  <Modal bind:visible={newGame} title="Your Game has been minted!">
+        {#each pieceSpace as row, rowIndex}
+        {#each row as square, squareIndex}
 
-    <ModalBody>
-      Here's the link to
-      <span on:click="{() => loadGame(newGame)}" class="cursor-pointer hover:underline text-blue-300 text-ellipsis overflow-hidden">
-        your game
-      </span>.
-      Share this with the the Wallets of the players you specified.
-      You can now set a bounty on the game, which will be paid in full to the winner when you certify the game outcome.
-    </ModalBody>
+          <div
+            class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
+            on:dragover="{dragOver}"
+            on:drop="{dropPiece}"
+            on:dragstart="{pickupPiece}"
+            on:dragend="{putdownPiece}"
+            data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
+          >
+            {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
+          </div>
 
-  </Modal>
+        {/each}
+        {/each}
+
+      </div>
+    </div>
   {/if}
 
-  {#if bountyGame}
-  <Modal bind:visible={bountyGame} title="Add to the bounty">
+  {#if !autoPlay}
 
-    <ModalBody>
-      Add to the bounty for this game
-      <div class="grid grid-cols-3">
-        <div class="col-span-2">
-          <Input placeholder="value in ETH" type="number" className="false" bind:value="{newBounty}" />
+    {#if newGame}
+    <Modal bind:visible={newGame} title="Your Game has been minted!">
+
+      <ModalBody>
+        Here's the link to
+        <span on:click="{() => loadGame(newGame)}" class="cursor-pointer hover:underline text-blue-300 text-ellipsis overflow-hidden">
+          your game
+        </span>.
+        Share this with the the Wallets of the players you specified.
+        You can now set a bounty on the game, which will be paid in full to the winner when you certify the game outcome.
+      </ModalBody>
+
+    </Modal>
+    {/if}
+
+    {#if bountyGame}
+    <Modal bind:visible={bountyGame} title="Add to the bounty">
+
+      <ModalBody>
+        Add to the bounty for this game
+        <div class="grid grid-cols-3">
+          <div class="col-span-2">
+            <Input placeholder="value in ETH" type="number" className="false" bind:value="{newBounty}" />
+          </div>
+          <div class="align-middle">
+            {#if settingBounty}
+            <Spinner label="Adding..." />
+            {/if}
+
+            {#if !settingBounty}
+            <Button type="primary" small on:click="{addBounty}" disabled="{!validBounty()}">
+              Submit
+            </Button>
+            {/if}
+          </div>
         </div>
-        <div class="align-middle">
-          {#if settingBounty}
-          <Spinner label="Adding..." />
-          {/if}
 
-          {#if !settingBounty}
-          <Button type="primary" small on:click="{addBounty}" disabled="{!validBounty()}">
-            Submit
-          </Button>
+        The bounty is paid in full, minus gas, to the winner of the game.
+        Note the winner must be certified on chain by the token owner, it is not automatically assigned by this client app.
+      </ModalBody>
+
+    </Modal>
+    {/if}
+
+    <Modal bind:visible={showPromoteModal} title="Choose Promotion">
+
+      <ModalBody>
+        <div class="flex">
+          {#if promoteColor === 'black'}
+          <div
+            on:click="{() => promoter.promote('rook')}"
+            class="cursor-pointer px-4"
+          >rook &#9820;</div>
+          <div
+            on:click="{() => promoter.promote('knight')}"
+            class="cursor-pointer px-4"
+          >knight &#9822;</div>
+          <div
+            on:click="{() => promoter.promote('bishop')}"
+            class="cursor-pointer px-4"
+          >bishop &#9821;</div>
+          <div
+            on:click="{() => promoter.promote('queen')}"
+            class="cursor-pointer px-4"
+          >queen &#9819;</div>
+          {/if}
+          {#if promoteColor === 'white'}
+          <div
+            on:click="{() => promoter.promote('rook')}"
+            class="cursor-pointer px-4"
+          >rook &#9814;</div>
+          <div
+            on:click="{() => promoter.promote('knight')}"
+            class="cursor-pointer px-4"
+          >knight &#9816;</div>
+          <div
+            on:click="{() => promoter.promote('bishop')}"
+            class="cursor-pointer px-4"
+          >bishop &#9815;</div>
+          <div
+            on:click="{() => promoter.promote('queen')}"
+            class="cursor-pointer px-4"
+          >queen &#9813;</div>
           {/if}
         </div>
+      </ModalBody>
+
+    </Modal>
+
+    <div class="fixed left-4 right-4">
+      {#each $alerts as alert}
+      <div on:click="{alerts.clearAlert(alert)}" class="cursor-pointer">
+        <Alert type="{alert.type}">{alert.message}</Alert>
       </div>
-
-      The bounty is paid in full, minus gas, to the winner of the game.
-      Note the winner must be certified on chain by the token owner, it is not automatically assigned by this client app.
-    </ModalBody>
-
-  </Modal>
-  {/if}
-
-  <Modal bind:visible={showPromoteModal} title="Choose Promotion">
-
-    <ModalBody>
-      <div class="flex">
-        {#if promoteColor === 'black'}
-        <div
-          on:click="{() => promoter.promote('rook')}"
-          class="cursor-pointer px-4"
-        >rook &#9820;</div>
-        <div
-          on:click="{() => promoter.promote('knight')}"
-          class="cursor-pointer px-4"
-        >knight &#9822;</div>
-        <div
-          on:click="{() => promoter.promote('bishop')}"
-          class="cursor-pointer px-4"
-        >bishop &#9821;</div>
-        <div
-          on:click="{() => promoter.promote('queen')}"
-          class="cursor-pointer px-4"
-        >queen &#9819;</div>
-        {/if}
-        {#if promoteColor === 'white'}
-        <div
-          on:click="{() => promoter.promote('rook')}"
-          class="cursor-pointer px-4"
-        >rook &#9814;</div>
-        <div
-          on:click="{() => promoter.promote('knight')}"
-          class="cursor-pointer px-4"
-        >knight &#9816;</div>
-        <div
-          on:click="{() => promoter.promote('bishop')}"
-          class="cursor-pointer px-4"
-        >bishop &#9815;</div>
-        <div
-          on:click="{() => promoter.promote('queen')}"
-          class="cursor-pointer px-4"
-        >queen &#9813;</div>
-        {/if}
-      </div>
-    </ModalBody>
-
-  </Modal>
-
-  <div class="fixed left-4 right-4">
-    {#each $alerts as alert}
-    <div on:click="{alerts.clearAlert(alert)}" class="cursor-pointer">
-      <Alert type="{alert.type}">{alert.message}</Alert>
-    </div>
-    {/each}
-  </div>
-  <div class="text-center">
-    <div class="mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold">
-      <div class="col-span-5">
-
-        <span on:click="{unloadGame}" class="cursor-pointer hover:underline text-blue-300">Tableland Chess</span>
-
-        {#if typeof $gameId === 'number'}
-
-          Game ID: {$gameId}
-
-          {#if $audience && !winner}
-          <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
-          {/if}
-
-          {#if $owner}
-          <p class="text-sm">
-            You are the owner of this game.
-            {#if winner && $bounty}
-            <span on:click="{() => certifyWinner($gameId)}" class="cursor-pointer hover:underline text-blue-300">
-              Certify Winner
-            </span>
-            {/if}
-          </p>
-          {/if}
-
-          {#if $myColor && !winner}
-            {#if  turn === $myColor}
-            <b>Your Turn</b>
-            {/if}
-            {#if  turn !== $myColor}
-            <b>Opponent's Turn</b>
-            {/if}
-            {#if palyerInCheck}
-            <span class="text-red">{turn} in check!</span>
-            {/if}
-          {/if}
-
-          {#if winner}
-          <h3>
-            Game Over
-            <span class="text-red">{winner} is the Winner!</span>
-          </h3>
-          {/if}
-          <p class="text-sm">White: {$whiteAddress}</p>
-          <p class="text-sm">Black: {$blackAddress}</p>
-
-        {/if}
-      </div>
-      {#if $myAddress}
-      <div class="text-sm text-center">
-        Connected with <b>{$myAddress.slice(0, 5)}...{$myAddress.slice(-5)}</b>
-        <span class="hover:underline cursor-pointer text-blue-300" on:click="{logout}">logout</span>
-      </div>
-      {/if}
-
-    </div>
-    
-  </div>
-  {#if !$connected}
-  <div class="container-center">
-    <button type="button" class="btn btn-connect cursor-pointer" on:click="{connect}">Connect To Tableland</button>
-  </div>
-  {/if}
-
-  {#if $connected}
-  <div class="flex items-start mt-8">
-
-    {#if typeof $gameId !== 'number'}
-    <div class="w-1/2 px-8 overflow-wrap">
-
-      <p class="font-bold">Games you are playing</p>
-      {#if $games.length}
-      {#each $games as game}
-      <p class="w-full border border-solid-bottom border-gray-300"></p>
-      <p class="truncate">
-        Game ID: <span on:click="{() => loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
-      </p>
-      <p class="truncate">Game Bounty: {game.bounty && utils.formatEther(game.bounty)}</p>
-      <p class="truncate">Player 1: {game.player1}</p>
-      <p class="truncate">Player 2: {game.player2}</p>
       {/each}
-      {/if}
-      <p class="w-full border border-solid-bottom border-gray-300"></p>
-
-      <p class="font-bold">Games you own</p>
-      {#if $ownedGames.length}
-      {#each $ownedGames as ownedGame}
-      <p class="w-full border border-solid-bottom border-gray-300"></p>
-      <p class="truncate">
-        Game ID:
-        <span on:click="{loadGame(ownedGame)}" class="pl-4 cursor-pointer hover:underline text-blue-300">
-          {ownedGame.id}
-        </span>
-      </p>
-      <p class="truncate">
-        Game Bounty: {ownedGame.bounty && utils.formatEther(ownedGame.bounty)}
-        {#if canAddBounty(ownedGame)}
-        <span on:click="{() => bountyGame = ownedGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
-          Add Bounty
-        </span>
-        {/if}
-      </p>
-      <p class="truncate">Player 1: {ownedGame.player1}</p>
-      <p class="truncate">Player 2: {ownedGame.player2}</p>
-      <p class="truncate">Winner: {ownedGame.winner}</p>
-      {/each}
-      {/if}
-      <p class="w-full border border-solid-bottom border-gray-300"></p>
     </div>
+    <div class="text-center">
+      <div class="mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold">
+        <div class="col-span-5">
 
-    <div class="w-1/2 px-8">
-      Mint a game
-      <Input label="Player 1 Address" bind:value="{newPlayer1Address}" />
-      <Input label="Player 2 Address" bind:value="{newPlayer2Address}" />
+          <span on:click="{unloadGame}" class="cursor-pointer hover:underline text-blue-300">Tableland Chess</span>
 
-      {#if minting}
-        <Spinner label="Minting..." />
-      {/if}
-      {#if !minting}
-      <Button type="primary" on:click="{mint}" disabled="{!validMint()}">
-        Mint
-      </Button>
-      {/if}
+          {#if typeof $gameId === 'number'}
+
+            Game ID: {$gameId}
+
+            {#if $audience && !winner}
+            <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
+            {/if}
+
+            {#if $owner}
+            <p class="text-sm">
+              You are the owner of this game.
+              {#if winner && $bounty}
+              <span on:click="{() => certifyWinner($gameId)}" class="cursor-pointer hover:underline text-blue-300">
+                Certify Winner
+              </span>
+              {/if}
+            </p>
+            {/if}
+
+            {#if $myColor && !winner}
+              {#if  turn === $myColor}
+              <b>Your Turn</b>
+              {/if}
+              {#if  turn !== $myColor}
+              <b>Opponent's Turn</b>
+              {/if}
+              {#if palyerInCheck}
+              <span class="text-red">{turn} in check!</span>
+              {/if}
+            {/if}
+
+            {#if winner}
+            <h3>
+              Game Over
+              <span class="text-red">{winner} is the Winner!</span>
+            </h3>
+            {/if}
+            <p class="text-sm">White: {$whiteAddress}</p>
+            <p class="text-sm">Black: {$blackAddress}</p>
+
+          {/if}
+        </div>
+        {#if $myAddress}
+        <div class="text-sm text-center">
+          Connected with <b>{$myAddress.slice(0, 5)}...{$myAddress.slice(-5)}</b>
+          <span class="hover:underline cursor-pointer text-blue-300" on:click="{logout}">logout</span>
+        </div>
+        {/if}
+
+      </div>
+      
+    </div>
+    {#if !$connected}
+    <div class="container-center">
+      <button type="button" class="btn btn-connect cursor-pointer" on:click="{connect}">Connect To Tableland</button>
     </div>
     {/if}
 
-    {#if typeof $gameId === 'number'}
-    <div class="chessboard">
+    {#if $connected}
+    <div class="flex items-start mt-8">
 
-      {#each pieceSpace as row, rowIndex}
-      {#each row as square, squareIndex}
+      {#if typeof $gameId !== 'number'}
+      <div class="w-1/2 px-8 overflow-wrap">
 
-        <div
-          class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
-          on:dragover="{dragOver}"
-          on:drop="{dropPiece}"
-          on:dragstart="{pickupPiece}"
-          on:dragend="{putdownPiece}"
-          data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
-        >
-          {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
-        </div>
+        <p class="font-bold">Games you are playing</p>
+        {#if $games.length}
+        {#each $games as game}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
+        <p class="truncate">
+          Game ID: <span on:click="{() => loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
+        </p>
+        <p class="truncate">Game Bounty: {game.bounty && utils.formatEther(game.bounty)}</p>
+        <p class="truncate">Player 1: {game.player1}</p>
+        <p class="truncate">Player 2: {game.player2}</p>
+        {/each}
+        {/if}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
 
-      {/each}
-      {/each}
-
-    </div>
-    <div class="history">
-      {#if $myColor}
-      <h3>
-        You are playing as <b>{$myColor}</b>
-      </h3>
-      {/if}
-
-      <h3 class="w-64">Moves</h3>
-
-      <div class="flex items-start">
-        <table class="move-table">
-          <tr>
-            <th></th>
-            <th>White</th>
-          </tr>
-          {#each history as move, i}
-          {#if !(i % 2)}
-          <tr>
-            <td>{1 + (i / 2)}</td>
-            <td>{move.notation}</td>
-          </tr>
+        <p class="font-bold">Games you own</p>
+        {#if $ownedGames.length}
+        {#each $ownedGames as ownedGame}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
+        <p class="truncate">
+          Game ID:
+          <span on:click="{loadGame(ownedGame)}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+            {ownedGame.id}
+          </span>
+        </p>
+        <p class="truncate">
+          Game Bounty: {ownedGame.bounty && utils.formatEther(ownedGame.bounty)}
+          {#if canAddBounty(ownedGame)}
+          <span on:click="{() => bountyGame = ownedGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+            Add Bounty
+          </span>
           {/if}
-          {/each}
-        </table>
-
-        <table class="move-table">
-          <tr>
-            <th>Black</th>
-          </tr>
-          {#each history as move, i}
-          {#if i % 2}
-          <tr>
-            <td>{move.notation}</td>
-          </tr>
-          {/if}
-          {/each}
-        </table>
+        </p>
+        <p class="truncate">Player 1: {ownedGame.player1}</p>
+        <p class="truncate">Player 2: {ownedGame.player2}</p>
+        <p class="truncate">Winner: {ownedGame.winner}</p>
+        {/each}
+        {/if}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
       </div>
 
+      <div class="w-1/2 px-8">
+        Mint a game
+        <Input label="Player 1 Address" bind:value="{newPlayer1Address}" />
+        <Input label="Player 2 Address" bind:value="{newPlayer2Address}" />
+
+        {#if minting}
+          <Spinner label="Minting..." />
+        {/if}
+        {#if !minting}
+        <Button type="primary" on:click="{mint}" disabled="{!validMint()}">
+          Mint
+        </Button>
+        {/if}
+      </div>
+      {/if}
+
+      {#if typeof $gameId === 'number'}
+      <div class="chessboard">
+
+        {#each pieceSpace as row, rowIndex}
+        {#each row as square, squareIndex}
+
+          <div
+            class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
+            on:dragover="{dragOver}"
+            on:drop="{dropPiece}"
+            on:dragstart="{pickupPiece}"
+            on:dragend="{putdownPiece}"
+            data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
+          >
+            {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
+          </div>
+
+        {/each}
+        {/each}
+
+      </div>
+      <div class="history">
+        {#if $myColor}
+        <h3>
+          You are playing as <b>{$myColor}</b>
+        </h3>
+        {/if}
+
+        <h3 class="w-64">Moves</h3>
+
+        <div class="flex items-start">
+          <table class="move-table">
+            <tr>
+              <th></th>
+              <th>White</th>
+            </tr>
+            {#each history as move, i}
+            {#if !(i % 2)}
+            <tr>
+              <td>{1 + (i / 2)}</td>
+              <td>{move.notation}</td>
+            </tr>
+            {/if}
+            {/each}
+          </table>
+
+          <table class="move-table">
+            <tr>
+              <th>Black</th>
+            </tr>
+            {#each history as move, i}
+            {#if i % 2}
+            <tr>
+              <td>{move.notation}</td>
+            </tr>
+            {/if}
+            {/each}
+          </table>
+        </div>
+
+      </div>
+      {/if}
     </div>
     {/if}
-  </div>
   {/if}
 </main>
 

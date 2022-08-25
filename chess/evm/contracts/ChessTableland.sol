@@ -12,6 +12,7 @@ struct TablelandData {
     string _metadataTable;
     string _attributesTable;
     string _movesTable;
+    string _animationBaseURI;
 }
 
 library ChessTableland {
@@ -162,7 +163,14 @@ library ChessTableland {
             "0,0,", // set conceded and bounty to default of 0
             // TODO: need to put default images on IPFS for thumb and image, then
             //       build an onlyOwner contract to set the animation_url
-            "'ipfs://thumb','ipfs://image','ipfs://animation_url'",
+            "'ipfs://thumb',",
+            "'ipfs://image',",
+            "'",
+            self._animationBaseURI,
+            "?white=", player1AddressString,
+            "&black=", player2AddressString,
+            "&game=", tokenIdString,
+            "&auto=true'",
             ");"
         ));
 
@@ -211,6 +219,10 @@ library ChessTableland {
         ));
     }
 
+    function _setAnimationBaseURI(TablelandData storage self, string memory baseURI) public {
+        self._animationBaseURI = baseURI;
+    }
+
     function _getMetadataURI(TablelandData storage self, uint256 tokenId, string memory baseURI)
         public
         view
@@ -247,7 +259,7 @@ library ChessTableland {
             " FROM ", self._metadataTable, " JOIN ", self._attributesTable, " ON ",
             self._metadataTable, ".id = ", self._attributesTable, ".game_id"
             " WHERE id = ", tokenIdString,
-            "&mode=json"
+            "&mode=list"
         );
     }
 
@@ -262,10 +274,10 @@ library ChessTableland {
         returns(string memory)
     {
         return string.concat(
-            "INSERT INTO ", tableName, " (type, value, game_id) VALUES (",
+            "INSERT INTO ", tableName, " (game_id, type, value) VALUES (",
                 gameId, ",",
-                attrType, ",",
-                value,
+                "'", attrType, "'", ",",
+                "'", value, "'",
             ");"
         );
     }

@@ -27,9 +27,10 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     // The Policy Contract uses this information to enforce ACL
     mapping(address => uint256[]) private _playerGames;
 
-    constructor(string memory baseURI, address registry) ERC721("ChessToken", "MTK") {
+    constructor(string memory baseURI, address registry, string memory appURI) ERC721("ChessToken", "MTK") {
         _baseURIString = baseURI;
         ChessTableland._initTableland(_tablelandData, registry);
+        ChessTableland._setAnimationBaseURI(_tablelandData, appURI);
     }
 
     /*
