@@ -166,28 +166,15 @@ contract CanvasGame is
 
         string memory base = _baseURI();
 
-        string memory json_group = "";
-        string[4] memory cols = ["id", "external_link", "x", "y"];
-        for (uint i; i < cols.length; i++) {
-          if (i > 0) {
-            json_group = string.concat(json_group,",");
-          }
-          json_group = string.concat(
-            json_group, 
-            "'",
-            cols[i],
-            "',",
-            cols[i]
-          );
-        }
-
+        /*
+         * SELECT json_object('id',id,'external_link',external_link,'x',x,'y',y)
+         *  as meta FROM canvas_5_4 WHERE id=11
+         */
         return string.concat(
           base, 
-          "SELECT%20",
-          json_group,
-          "%20FROM%20",
+          "SELECT%20json_object(%27id%27,id,%27external_link%27,external_link,%27x%27,x,%27y%27,y)%20as%20meta%20FROM%20",
           _metadataTable,
-          "%20WHERE%20id%3D",
+          "%20WHERE%20id=",
           Strings.toString(tokenId),
           "&mode=list"
         );
