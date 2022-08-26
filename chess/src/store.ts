@@ -2,7 +2,7 @@ import { ethers, BigNumber } from 'ethers';
 import { tick } from 'svelte';
 import { writable, derived } from 'svelte/store';
 import type { Writable } from "svelte/store";
-import { connect, ConnectOptions } from '@tableland/sdk';
+import { connect, ConnectOptions, ChainName } from '@tableland/sdk';
 import chessToken from '../evm/artifacts/contracts/ChessToken.sol/ChessToken.json';
 
 /*
@@ -11,6 +11,8 @@ import chessToken from '../evm/artifacts/contracts/ChessToken.sol/ChessToken.jso
 // Need this so we can get moves when client is unauthenticated,
 // i.e. market places wanting to show NFTs via animation_url
 const VALIDATOR_HOST = process.env.VALIDATOR_HOST;
+// The tableland network this app is running on
+const TABLELAND_NETWORK = process.env.TABLELAND_NETWORK as ChainName;
 // globally unique tablename that holds the moves for all players and all games
 const MOVES_TABLENAME = process.env.MOVES_TABLENAME;
 // globally unique tablename that holds NFT metadata
@@ -415,11 +417,8 @@ export const connected = {
 
 export const init = async function () {
   try {
-    //const connectParams: ConnectOptions = {
-      //chain: 'ethereum-goerli'
-    //};
     const connectParams: ConnectOptions = {
-      chain: 'local-tableland'
+      chain: TABLELAND_NETWORK
     };
 
     _tableland = connect(connectParams);

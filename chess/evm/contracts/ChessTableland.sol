@@ -161,10 +161,9 @@ library ChessTableland {
             " (id, conceded, bounty, thumb, image, animation_url) VALUES (",
             tokenIdString, ",",
             "0,0,", // set conceded and bounty to default of 0
-            // TODO: need to put default images on IPFS for thumb and image, then
-            //       build an onlyOwner contract to set the animation_url
-            "'ipfs://thumb',",
-            "'ipfs://image',",
+            // Default images are on IPFS for thumb and image
+            "'ipfs://bafkreifiaqt3pfoir56owfr5ess4b6vhxeytpallik4oacnuyc5abtrjdy',",
+            "'ipfs://bafkreifiaqt3pfoir56owfr5ess4b6vhxeytpallik4oacnuyc5abtrjdy',",
             "'",
             self._animationBaseURI,
             "?white=", player1AddressString,

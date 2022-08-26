@@ -34,6 +34,12 @@ const deploy = async function () {
 
   console.log("Chess Token deployed to:", chessToken.address, "By account:", account.address);
 
+  // wait 1 minute to avoid a REPLACEMENT_UNDERPRICED error
+  // see https://docs.ethers.io/v5/troubleshooting/errors/#help-REPLACEMENT_UNDERPRICED
+  await new Promise((resolve) => {
+    setTimeout(() => resolve(), 60000)
+  });
+
   const ChessPolicy = await hre.ethers.getContractFactory("ChessPolicy", {
     libraries: {
       ChessTableland: chessTablelandLib.address
