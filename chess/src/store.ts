@@ -6,11 +6,13 @@ import { connect, ConnectOptions } from '@tableland/sdk';
 import chessToken from '../evm/artifacts/contracts/ChessToken.sol/ChessToken.json';
 
 // globally unique tablename that all players use
+const VALIDATOR_HOST = 'http://localhost:8080';
 const MOVES_TABLENAME = 'chess_moves_31337_4';
 const TOKEN_CONTRACT_ADDRESS = '0x71C95911E9a5D330f4D621842EC243EE1343292e';
 const tokenAbi = chessToken.abi;
 const TOKEN_TABLENAME = 'chess_token_31337_2';
 const moveWaitDiration = 5000;
+const autoPlayDiration = 2000;
 
 // TODO: use alchemy to get the games the user owns, and the games the user is actively playing
 
@@ -25,6 +27,7 @@ let _black;
 let _bounty;
 let _gameId;
 let _intervalId;
+let _autoPlayIntervalId;
 let _moves;
 let _myColor;
 let _owner;
@@ -48,7 +51,6 @@ const parseResponse = function (data: {rows: any[], columns: {name: string}[]}) 
 export const gameId = writable('');
 export const whiteAddress = writable('');
 export const blackAddress = writable('');
-export const autoPlay = writable(false);
 
 // We want to make the game id available to the methods in the store.
 // afaict Svelte best practices is to have a mutable var in the file's scope that is updated via subscribe.
@@ -101,7 +103,7 @@ export const moves = {
   listenForMoves: function (black = _black, white = _white, forever = false) {
     if (!black || !white) return;
     _intervalId = setInterval(async function () {
-      const res = await _tableland.read(sqlStatements.loadGame(_gameId, black, white));
+      const res = await _tableland.read(sqlStatements.loadGame(_gameId));
 
       const game = parseResponse(res);
       if (game.length > _moves.length) {
@@ -315,7 +317,7 @@ export const games = {
       gameId.set(loadGameId);
       await tick();
 
-      const res = await _tableland.read(sqlStatements.loadGame(loadGameId, black, white));
+      const res = await _tableland.read(sqlStatements.loadGame(loadGameId));
 
       const gameMoves = parseResponse(res);
       setMoves(gameMoves.map(move => move.move));
@@ -344,13 +346,43 @@ export const games = {
       alerts.addAlert(err.message, 'error');
     }
   },
+  getGameMoves: async function (gameId) {
+    try {
+      const urlStatement = sqlStatements.loadGame(gameId)
+        .trim()
+        .replace('\n', '')
+        .replace(';', '')
+        .replace(/\s\s+/g, ' ');
+      const res = await fetch(
+        `${VALIDATOR_HOST}/query?s=${urlStatement}&mode=json`
+      );
+      const moves = await res.json();
+      console.log(moves);
+      setMoves(moves.map(move => move.move));
+    } catch (err) {
+      console.log(err);
+      alerts.addAlert(err.message, 'error');
+    }
+  },
   unloadGame: function () {
     moves.unlistenForMoves();
     gameId.set('');
     setMoves([]);
     window.history.pushState({}, '', `${window.location.protocol}//${window.location.host}${window.location.pathname}`);
+  },
+  startAutoPlay: function () {
+    // clone moves so that we can set then on a loop
+    const allMoves = _moves.map(m => String(m));
+    let currentMove = 0;
+    _autoPlayIntervalId = setInterval(function () {
+      setMoves(allMoves.slice(0, currentMove % (allMoves.length + 1)));
+      currentMove++;
+    }, autoPlayDiration);
+  },
+  stopAutoPlay: function () {
+    clearInterval(_autoPlayIntervalId);
   }
-}
+};
 
 const { subscribe: alertsSubscribe, set: setAlerts, update: updateAlerts } = writable([]);
 export const alerts = {
@@ -382,7 +414,7 @@ export const init = async function () {
       chain: 'local-tableland'
     };
 
-    _tableland = await connect(connectParams);
+    _tableland = connect(connectParams);
     await _tableland.siwe();
 
     const decodedToken = atob(_tableland.token.token);
@@ -410,7 +442,7 @@ export const init = async function () {
 const sqlStatements = {
   doMove: (gameId: string, move: string) => `INSERT INTO ${MOVES_TABLENAME} (player_address, game_id, move) VALUES ('${_address}', '${gameId}', '${move}');`,
   myMoves: () => `SELECT * FROM ${MOVES_TABLENAME} WHERE player_address = '${_address}';`,
-  loadGame: (game: string, black: string, white: string) => `
+  loadGame: (game: string) => `
     SELECT * FROM ${MOVES_TABLENAME}
     WHERE game_id = '${game}'
     ORDER BY rowid ASC;

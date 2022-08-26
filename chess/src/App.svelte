@@ -695,7 +695,11 @@
     return i;
   }
 
-  // TODO: need a way to deal with pawns making it to the back line
+  function stringToNumber(str) {
+    const num = parseInt(str, 10);
+    if (isNaN(num)) return;
+    return num;
+  }
 
 </script>
 
@@ -737,12 +741,7 @@
   const gameBoard = new Board();
   let autoPlay;
 
-  onMount(function () {
-    const params = new URLSearchParams(location.search);
-    autoPlay = !!params.get('auto'); 
-  })
-
-  const connect = async function () {
+  onMount(async function () {
     moves.subscribe(async mvs => {
       if (mvs.length === 0) {
         gameBoard.reset();
@@ -754,8 +753,8 @@
         const moveStr = mvs[i];
         const parts = moveStr.split(':');
         const piece = parts[0];
-        const from = parts[1].split(',');
-        const to = parts[2].split(',');
+        const from = parts[1].split(',').map(stringToNumber);
+        const to = parts[2].split(',').map(stringToNumber);
         const promoted = parts[3]
 
         if (!(piece && from && to)) {
@@ -770,6 +769,16 @@
       }
     });
 
+    const params = new URLSearchParams(location.search);
+    autoPlay = !!params.get('auto');
+
+    if (autoPlay) {
+      await games.getGameMoves(params.get('game'));
+      games.startAutoPlay();
+    }
+  })
+
+  const connect = async function () {
     await init();
     await games.findGames();
   };
@@ -891,8 +900,8 @@
   async function dropPiece(eve) {
     eve.preventDefault();
     if (winner) return;
-    const moveTo = eve.currentTarget.dataset.location.split(',').map(str => parseInt(str, 10));
-    const moveFrom = eve.dataTransfer.getData('location').split(',').map(str => parseInt(str, 10));
+    const moveTo = eve.currentTarget.dataset.location.split(',').map(stringToNumber);
+    const moveFrom = eve.dataTransfer.getData('location').split(',').map(stringToNumber);
     const piece = eve.dataTransfer.getData('piece');
 
     // something went wrong in the event cycle, so we bail

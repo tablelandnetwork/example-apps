@@ -291,7 +291,7 @@ library ChessTableland {
             s[2*i] = char(hi);
             s[2*i+1] = char(lo);
         }
-        return string(s);
+        return string.concat("0x",string(s));
     }
 
     function char(bytes1 b) public pure returns (bytes1 c) {
