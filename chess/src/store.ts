@@ -5,12 +5,20 @@ import type { Writable } from "svelte/store";
 import { connect, ConnectOptions } from '@tableland/sdk';
 import chessToken from '../evm/artifacts/contracts/ChessToken.sol/ChessToken.json';
 
-// globally unique tablename that all players use
-const VALIDATOR_HOST = 'http://localhost:8080';
-const MOVES_TABLENAME = 'chess_moves_31337_4';
-const TOKEN_CONTRACT_ADDRESS = '0x71C95911E9a5D330f4D621842EC243EE1343292e';
+/*
+ * globals that will need to be set per chain
+ */
+// Need this so we can get moves when client is unauthenticated,
+// i.e. market places wanting to show NFTs via animation_url
+const VALIDATOR_HOST = process.env.VALIDATOR_HOST;
+// globally unique tablename that holds the moves for all players and all games
+const MOVES_TABLENAME = process.env.MOVES_TABLENAME;
+// globally unique tablename that holds NFT metadata
+const TOKEN_TABLENAME = process.env.TOKEN_TABLENAME;
+const TOKEN_CONTRACT_ADDRESS = process.env.TOKEN_CONTRACT_ADDRESS;
+
+// global constants
 const tokenAbi = chessToken.abi;
-const TOKEN_TABLENAME = 'chess_token_31337_2';
 const moveWaitDiration = 5000;
 const autoPlayDiration = 2000;
 

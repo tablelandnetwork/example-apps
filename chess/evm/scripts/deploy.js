@@ -9,6 +9,9 @@ const deploy = async function () {
   const accounts = await hre.ethers.getSigners();
   const account = network.name === "localhost" ? accounts[1] : accounts[0];
 
+  console.log("--- Starting to deploy the full chess app ---");
+  console.log("Using Registry Address:", registryAddress);
+  console.log("Using Account:", account.address);
   // To reduce contract size we leverage a library for all Tablaland interactions
   // NOTE: is your contract is small enough you wouldn't need to use this approach
   const ChessTablelandLib = await hre.ethers.getContractFactory("ChessTableland");
@@ -31,13 +34,19 @@ const deploy = async function () {
 
   console.log("Chess Token deployed to:", chessToken.address, "By account:", account.address);
 
-  const ChessPolicy = await hre.ethers.getContractFactory("ChessPolicy");
+  const ChessPolicy = await hre.ethers.getContractFactory("ChessPolicy", {
+    libraries: {
+      ChessTableland: chessTablelandLib.address
+    }
+  });
   const chessPolicy = await ChessPolicy.connect(account).deploy(chessToken.address);
   await chessPolicy.deployed();
 
   console.log("Chess Policy deployed to:", chessPolicy.address, "By account:", account.address);
 
   await chessToken.initSetController(chessPolicy.address);
+  console.log("Policy has been set as the token table controller");
+  console.log("--- All done ~O8> ---");
 };
 
 deploy().then(() => {
