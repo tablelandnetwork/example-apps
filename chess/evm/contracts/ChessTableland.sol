@@ -248,6 +248,7 @@ library ChessTableland {
             baseURI,
             "SELECT json_object(",
                 "'name','Chess Game '||id,",
+                "'description','Chess Game '||id,",
                 "'external_url','https://github.com/tablelandnetwork/example-apps/chess',",
                 "'image',image,",
                 "'thumb',thumb,",
