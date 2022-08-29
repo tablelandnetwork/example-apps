@@ -164,6 +164,7 @@ library ChessTableland {
             // Default images are on IPFS for thumb and image
             "'ipfs://bafkreifiaqt3pfoir56owfr5ess4b6vhxeytpallik4oacnuyc5abtrjdy',",
             "'ipfs://bafkreifiaqt3pfoir56owfr5ess4b6vhxeytpallik4oacnuyc5abtrjdy',",
+            // animation_url
             "'",
             self._animationBaseURI,
             "?white=", player1AddressString,
