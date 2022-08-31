@@ -1423,12 +1423,16 @@
   border-top: 1px solid black;
 }
 
-.piece {
-  position: absolute;
-}
-
 @media (max-width: 700px) {
+  .black {
+    font-size: 6vw;
+  }
 
+  .white {
+    font-size: 6vw;
+  }
+}
+@media (min-width: 701px) {
   .black {
     font-size: 50px;
   }
@@ -1444,7 +1448,6 @@
   height: 0;
   padding-bottom: 12.5%;
   background-color: #999;
-  font-size: 7vw;
   text-align: center;
   display: table-cell;
   vertical-align: middle;
@@ -1456,7 +1459,6 @@
   height: 0;
   padding-bottom: 12.5%;
   background-color: #fff;
-  font-size: 7vw;
   text-align:center;
   display: table-cell;
   vertical-align:middle;
