@@ -13,6 +13,7 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     Counters.Counter private _tokenIdCounter;
     string private _baseURIString;
     TablelandData internal _tablelandData;
+    address internal _deployedBy;
 
     // data will be kept in tableland, this is used to track bounties and enable on chain ACL
     struct Game {
@@ -29,7 +30,11 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
 
     constructor(string memory baseURI, address registry, string memory appURI) ERC721("ChessToken", "MTK") {
         _baseURIString = baseURI;
+        _deployedBy = msg.sender;
         ChessTableland._initTableland(_tablelandData, registry);
+
+        // NOTE: you can only set the appURI during deploy
+        // The app should be hosted on IPFS and pinned somehow
         ChessTableland._setAnimationBaseURI(_tablelandData, appURI);
     }
 
@@ -48,14 +53,14 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
         ChessTableland._initSetController(_tablelandData, policyAddress);
     }
 
+    // You can use these functions to figure out what
+    // the names of your tables are after deploying
     function getMetadataTableId() public view returns(uint256) {
         return _tablelandData._metadataTableId;
     }
-
     function getAttributesTableId() public view returns(uint256) {
         return _tablelandData._attributesTableId;
     }
-
     function getMovesTableId() public view returns(uint256) {
         return _tablelandData._movesTableId;
     }
@@ -68,6 +73,18 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
 
         return ChessTableland._getMetadataURI(_tablelandData, tokenId, _baseURI());
     }
+
+    function setBaseURI(string memory baseURI) public {
+        require(msg.sender == _deployedBy, "only the address that deployed the contract can call");
+
+        _baseURIString = baseURI;
+    } 
+
+    function setAppBaseURI(string memory appURI) public {
+        require(msg.sender == _deployedBy, "only the address that deployed the contract can call");
+
+        ChessTableland._setAnimationBaseURI(_tablelandData, appURI);
+    } 
 
     function _baseURI() internal view virtual override returns (string memory) {
         return _baseURIString;

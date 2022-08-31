@@ -3,7 +3,11 @@ const { ethers } = require("hardhat");
 const { BigNumber } = require("ethers");
 
 const validatorService = "http://localhost:8080";
-const appService = "http://localhost:3000";
+const baseUri = validatorService + "/query?s=";
+const appUri = "http://localhost:3000";
+
+module.exports.appUri = appUri;
+module.exports.baseUri = baseUri;
 
 module.exports.deployAll = async function () {
   const RegistryFactory = await ethers.getContractFactory("TablelandTables");
@@ -25,7 +29,7 @@ module.exports.deployAll = async function () {
       ChessTableland: chessTablelandLib.address
     }
   });
-  const chessTokens = await ChessTokenFactory.deploy(validatorService, registry.address, appService);
+  const chessTokens = await ChessTokenFactory.deploy(baseUri, registry.address, appUri);
   await chessTokens.deployed();
   await chessTokens.initCreate();
 

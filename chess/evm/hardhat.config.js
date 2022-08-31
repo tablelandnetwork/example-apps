@@ -97,16 +97,15 @@ module.exports = {
   },
   appURIs: {
     // mainnets
-    ethereum: "https://tableland.network/query?s=",
-    optimism: "https://tableland.network/query?s=",
-    polygon: "https://tableland.network/query?s=",
+    ethereum: "fixme",
+    optimism: "fixme",
+    polygon: "fixme",
     // testnets
-    "ethereum-goerli": "https://testnet.tableland.network/query?s=",
-    "optimism-kovan": "https://testnet.tableland.network/query?s=",
-    "polygon-mumbai": "https://testnet.tableland.network/query?s=",
+    "ethereum-goerli": "fixme",
+    "optimism-kovan": "fixme",
+    "polygon-mumbai": "https://d49bgqk3gxy9r.cloudfront.net/",
     // devnets
-    "optimism-kovan-staging":
-      "https://staging.tableland.network/query?s=",
+    "optimism-kovan-staging": "fixme",
     localhost: "http://localhost:3000/",
   }
 };

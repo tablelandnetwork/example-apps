@@ -1313,7 +1313,7 @@
         {#each row as square, squareIndex}
 
           <div
-            class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
+            class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'} relative"
             on:dragover="{dragOver}"
             on:drop="{dropPiece}"
             on:dragstart="{pickupPiece}"
@@ -1409,7 +1409,6 @@
 
 .chessboard {
   width: 690px;
-  height: 690px;
   margin: 0 1rem;
   border: 25px solid #333;
 }
@@ -1424,12 +1423,28 @@
   border-top: 1px solid black;
 }
 
+.piece {
+  position: absolute;
+}
+
+@media (max-width: 700px) {
+
+  .black {
+    font-size: 50px;
+  }
+
+  .white {
+    font-size: 50px;
+  }
+}
+
 .black {
   float: left;
-  width: 80px;
-  height: 80px;
+  width: 12.5%;
+  height: 0;
+  padding-bottom: 12.5%;
   background-color: #999;
-  font-size: 50px;
+  font-size: 7vw;
   text-align: center;
   display: table-cell;
   vertical-align: middle;
@@ -1437,10 +1452,11 @@
 
 .white {
   float: left;
-  width: 80px;
-  height: 80px;
+  width: 12.5%;
+  height: 0;
+  padding-bottom: 12.5%;
   background-color: #fff;
-  font-size:50px;
+  font-size: 7vw;
   text-align:center;
   display: table-cell;
   vertical-align:middle;

@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const { BigNumber } = require("ethers");
-const { deployAll } = require("./util");
+const { deployAll, appUri, baseUri } = require("./util");
 
 describe("Chess Game NFT Contract", function () {
   let accounts;
@@ -282,6 +282,56 @@ describe("Chess Game NFT Contract", function () {
     await expect(game.bounty).to.equal(ethers.utils.parseEther("4"));
   });
 
+  it("Should allow address that deployed to set base URI", async function () {
+    const [account0] = accounts;
+
+    const gameId = await getGame();
+
+    const originalUri = await chessTokens
+      .connect(account0)
+      .tokenURI(gameId);
+console.log(originalUri);
+    expect(originalUri.indexOf(baseUri)).to.equal(0)
+
+    const newUri = "http://newdomain.com/query?s=";
+    await chessTokens
+      .connect(account0)
+      .setBaseURI(newUri);
+
+    const newBaseUri = await chessTokens
+      .connect(account0)
+      .tokenURI(gameId);
+
+    expect(originalUri).not.to.equal(newBaseUri);
+    expect(newBaseUri.indexOf(baseUri)).to.equal(-1);
+    expect(newBaseUri.indexOf(newUri)).to.equal(0);
+  });
+
+  it("Should allow address that deployed to set app URI", async function () {
+    const [account0] = accounts;
+
+    const gameId = await getGame();
+
+    const originalUri = await chessTokens
+      .connect(account0)
+      .tokenURI(gameId);
+
+    expect(originalUri.indexOf(appUri)).to.equal(223);
+
+    const newUri = "http://newdomain.ipfs";
+    await chessTokens
+      .connect(account0)
+      .setAppBaseURI(newUri);
+
+    const newAppUri = await chessTokens
+      .connect(account0)
+      .tokenURI(gameId);
+
+    expect(originalUri).not.to.equal(newAppUri);
+    expect(newAppUri.indexOf(appUri)).to.equal(-1);
+    expect(newAppUri.indexOf(newUri)).to.equal(223);
+  });
+
   // Test what it should NOT do
   it("Should not allow non-owner to declare winner", async function () {
     const [account0, account1, account2] = accounts;
@@ -411,6 +461,30 @@ describe("Chess Game NFT Contract", function () {
       .connect(account0)
       .getGame(BigNumber.from(1))
     ).to.be.revertedWith("game does not exist");
+  });
+
+  it("Should only allow deployer address to set app URI", async function () {
+    const [account0, account1] = accounts;
+
+    const newBaseUri = "http://newdomain.ipfs";
+    // account1 did not deploy the contract
+    await expect(
+      chessTokens
+      .connect(account1)
+      .setAppBaseURI(newBaseUri)
+    ).to.be.revertedWith("only the address that deployed the contract can call");
+  });
+
+  it("Should only allow deployer address to set base URI", async function () {
+    const [account0, account1] = accounts;
+
+    const newBaseUri = "http://newdomain.com";
+    // account1 did not deploy the contract
+    await expect(
+      chessTokens
+      .connect(account1)
+      .setBaseURI(newBaseUri)
+    ).to.be.revertedWith("only the address that deployed the contract can call");
   });
 
 });
