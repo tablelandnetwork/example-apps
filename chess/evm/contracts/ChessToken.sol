@@ -166,6 +166,11 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
             "sender must be a player"
         );
 
+        ChessTableland._concede(_tablelandData, tokenId);
+
+        _deactivatePlayerGame(tokenId, _games[tokenId].player1);
+        _deactivatePlayerGame(tokenId, _games[tokenId].player2);
+
         if (_games[tokenId].player1 == msg.sender) {
             _games[tokenId].winner = payable(_games[tokenId].player2);
         }
@@ -173,8 +178,6 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
         if (_games[tokenId].player2 == msg.sender) {
             _games[tokenId].winner = payable(_games[tokenId].player1);
         }
-
-        ChessTableland._concede(_tablelandData, tokenId);
     }
 
     function setWinner(uint256 tokenId, address winner)
@@ -191,10 +194,10 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
 
         ChessTableland._setWinner(_tablelandData, tokenId, winner);
 
-        _games[tokenId].winner = payable(winner);
-
         _deactivatePlayerGame(tokenId, _games[tokenId].player1);
         _deactivatePlayerGame(tokenId, _games[tokenId].player2);
+
+        _games[tokenId].winner = payable(winner);
     }
 
     // use the pattern where the winner claims the bounty
