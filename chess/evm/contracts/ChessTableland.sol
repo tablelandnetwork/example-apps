@@ -185,11 +185,11 @@ library ChessTableland {
     }
 
     function _setBounty(TablelandData storage self, uint256 tokenId, uint256 bounty) public {
-        self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
+        self._tableland.runSQL(address(this), self._attributesTableId, string.concat(
             "UPDATE ",
             self._attributesTable,
             " SET value = ",
-            Strings.toString(bounty),
+            "'", Strings.toString(bounty), "'",
             " WHERE game_id = ",
             Strings.toString(tokenId),
             " AND type = 'bounty';"
@@ -208,10 +208,10 @@ library ChessTableland {
     }
 
     function _setWinner(TablelandData storage self, uint256 tokenId, address winner) public {
-        self._tableland.runSQL(address(this), self._metadataTableId, string.concat(
+        self._tableland.runSQL(address(this), self._attributesTableId, string.concat(
             "INSERT INTO ", self._attributesTable, " (type, value, game_id) VALUES (",
                 "'winner',",
-                _addressToString(winner), ",",
+                "'", _addressToString(winner), "'", ",",
                 Strings.toString(tokenId),
             ");"
         ));

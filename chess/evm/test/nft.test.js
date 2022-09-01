@@ -290,7 +290,7 @@ describe("Chess Game NFT Contract", function () {
     const originalUri = await chessTokens
       .connect(account0)
       .tokenURI(gameId);
-console.log(originalUri);
+
     expect(originalUri.indexOf(baseUri)).to.equal(0)
 
     const newUri = "http://newdomain.com/query?s=";

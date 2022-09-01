@@ -88,6 +88,8 @@ owner.subscribe(isOwner => _owner = isOwner);
 export const bounty = writable('');
 owner.subscribe(newBounty => _bounty = newBounty);
 
+export const officialWinner = writable('');
+
 
 const { subscribe: movesSubscribe, set: setMoves, update: updateMoves } = writable([]);
 movesSubscribe(mvs => _moves = mvs);
@@ -304,6 +306,7 @@ export const games = {
       setMoves([]);
       moves.unlistenForMoves();
       bounty.set('');
+      officialWinner.set('');
 
       const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, tokenAbi, _tableland.signer);
       const tokenOwner = await tokenContract.ownerOf(BigNumber.from(loadGameId));
@@ -318,8 +321,6 @@ export const games = {
 
         const color = white === _address ? 'white' : 'black';
         myColor.update(c => color);
-      } else if (_address === tokenOwner) {
-        audience.set(false);
       } else {
         audience.set(true);
       }
@@ -333,13 +334,20 @@ export const games = {
       setMoves(gameMoves.map(move => move.move));
 
       const currentBounty = ethers.utils.parseEther(game.bounty.toString()).toString();
+
       bounty.set(currentBounty === '0' ? '' : currentBounty);
+      if (game.winner && game.winner.indexOf('0x0000000000000000000000000') === -1) {
+        officialWinner.set(game.winner);
+      }
 
       if (_audience) {
         // If the user is in the audience listen forever
         moves.listenForMoves(black, white, true);
       } else if (gameMoves.length && gameMoves[gameMoves.length - 1].player_address === _address) {
         // If this player made the last move, start waiting for the other player to make their move
+        moves.listenForMoves(black, white);
+      } else if (gameMoves.length === 0 && _address === black) {
+        // If this player is black and white hasn't made the first move yet
         moves.listenForMoves(black, white);
       }
 
@@ -423,6 +431,8 @@ export const init = async function () {
 
     _tableland = connect(connectParams);
     await _tableland.siwe();
+
+    if (!_tableland.token?.token) return;
 
     const decodedToken = atob(_tableland.token.token);
 

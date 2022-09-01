@@ -735,6 +735,7 @@
     moves,
     myAddress,
     myColor,
+    officialWinner,
     whiteAddress
   } from './store';
 
@@ -785,6 +786,7 @@
 
   const loadGame = async function (game) {
     newGame = false;
+    winner = '';
     await games.loadGame(game.id, game.player2, game.player1);
   };
   const unloadGame = function () {
@@ -1190,14 +1192,14 @@
 
             Game ID: {$gameId}
 
-            {#if $audience && !winner}
+            {#if $audience && !$owner && !winner}
             <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
             {/if}
 
             {#if $owner}
             <p class="text-sm">
               You are the owner of this game.
-              {#if winner && $bounty}
+              {#if winner && $bounty && !$officialWinner}
               <span on:click="{() => certifyWinner($gameId)}" class="cursor-pointer hover:underline text-blue-300">
                 Certify Winner
               </span>
@@ -1220,12 +1222,15 @@
             {#if winner}
             <h3>
               Game Over
-              <span class="text-red">{winner} is the Winner!</span>
+              <span class="text-red">{winner} is the {$officialWinner ? 'certified' : ''} Winner!</span>
             </h3>
             {/if}
             <p class="text-sm">White: {$whiteAddress}</p>
             <p class="text-sm">Black: {$blackAddress}</p>
 
+            {#if $officialWinner}
+            <p class="text-sm">Certified Winner: {$officialWinner}</p>
+            {/if}
           {/if}
         </div>
         {#if $myAddress}

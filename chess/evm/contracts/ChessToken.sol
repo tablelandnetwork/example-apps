@@ -189,7 +189,7 @@ contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
             "winner must be a player"
         );
 
-        ChessTableland._setWinner(_tablelandData, tokenId, _games[tokenId].winner);
+        ChessTableland._setWinner(_tablelandData, tokenId, winner);
 
         _games[tokenId].winner = payable(winner);
 
