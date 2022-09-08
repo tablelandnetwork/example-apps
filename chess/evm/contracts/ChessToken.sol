@@ -1,31 +1,68 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "@tableland/evm/contracts/utils/URITemplate.sol";
+import "./ChessTableland.sol";
 
-contract GameToken is ERC721, Ownable {
+contract ChessToken is ERC721Enumerable, ERC721Holder, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
+    string private _baseURIString;
+    TablelandData internal _tablelandData;
+    address internal _deployedBy;
 
-    string baseURI;
-
+    // data will be kept in tableland, this is used to track bounties and enable on chain ACL
     struct Game {
         address player1;
         address player2;
-        bool condeded;
         address payable winner;
-        uint balance;
+        uint256 bounty;
     }
 
     mapping(uint256 => Game) private _games;
+
+    // The Policy Contract uses this information to enforce ACL
     mapping(address => uint256[]) private _playerGames;
 
-    constructor() ERC721("GameToken", "MTK") {
-        baseURI = "https://13vtpw6ppk.execute-api.us-east-1.amazonaws.com/chess-nft-metadata?game=";
+    constructor(string memory baseURI, address registry, string memory appURI) ERC721("ChessToken", "MTK") {
+        _baseURIString = baseURI;
+        _deployedBy = msg.sender;
+        ChessTableland._initTableland(_tablelandData, registry);
+
+        // NOTE: you can only set the appURI during deploy
+        // The app should be hosted on IPFS and pinned somehow
+        ChessTableland._setAnimationBaseURI(_tablelandData, appURI);
+    }
+
+    /*
+     *  Create a tables to store metadata and moves for the Chess Token
+     */
+    function initCreate() external onlyOwner() {
+        ChessTableland._initCreateTables(_tablelandData);
+    }
+
+    /*
+     *  Set the Policy Controller contract that will enforce
+     *  Tableland ACL rules for the Chess Moves Table
+     */
+    function initSetController(address policyAddress) external onlyOwner() {
+        ChessTableland._initSetController(_tablelandData, policyAddress);
+    }
+
+    // You can use these functions to figure out what
+    // the names of your tables are after deploying
+    function getMetadataTableId() public view returns(uint256) {
+        return _tablelandData._metadataTableId;
+    }
+    function getAttributesTableId() public view returns(uint256) {
+        return _tablelandData._attributesTableId;
+    }
+    function getMovesTableId() public view returns(uint256) {
+        return _tablelandData._movesTableId;
     }
 
     /**
@@ -34,22 +71,23 @@ contract GameToken is ERC721, Ownable {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-        string memory player1 = _addressToString(_games[tokenId].player1);
-        string memory player2 = _addressToString(_games[tokenId].player2);
-        string memory tokenString = Strings.toString(tokenId);
+        return ChessTableland._getMetadataURI(_tablelandData, tokenId, _baseURI());
+    }
 
-        return bytes(baseURI).length > 0 ?
-            string(
-                abi.encodePacked(
-                    baseURI,
-                    tokenString,
-                    "&white=",
-                    player1,
-                    "&black=",
-                    player2
-                )
-            ) :
-            "";
+    function setBaseURI(string memory baseURI) public {
+        require(msg.sender == _deployedBy, "only the address that deployed the contract can call");
+
+        _baseURIString = baseURI;
+    } 
+
+    function setAppBaseURI(string memory appURI) public {
+        require(msg.sender == _deployedBy, "only the address that deployed the contract can call");
+
+        ChessTableland._setAnimationBaseURI(_tablelandData, appURI);
+    } 
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseURIString;
     }
 
     function mintGame(address to, address player1, address player2)
@@ -62,17 +100,23 @@ contract GameToken is ERC721, Ownable {
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
 
+        // We are going to leave this to track bounties
         Game storage game = _games[tokenId];
         game.player1 = player1;
         game.player2 = player2;
-        game.balance = 0;
+        game.bounty = 0;
 
+        // This is used by the Policy contract to determine if insert is allowed
         _playerGames[player1].push(tokenId);
         _playerGames[player2].push(tokenId);
+
+        // insert Tableland row of metadata
+        ChessTableland._insertGame(_tablelandData, tokenId, player1, player2);
 
         return tokenId;
     }
 
+    // this function can be used to get the players and bounty of a game
     function getGame(uint256 tokenId)
         public
         view
@@ -86,6 +130,7 @@ contract GameToken is ERC721, Ownable {
         return game;
     }
 
+    // this function is used by the Policy Contract to construct a Tableland Policy
     function getPlayerGames(address player) 
         public
         view
@@ -105,7 +150,9 @@ contract GameToken is ERC721, Ownable {
         require(ownerOf(tokenId) != _games[tokenId].player1, "owner is a player");
         require(ownerOf(tokenId) != _games[tokenId].player2, "owner is a player");
 
-        _games[tokenId].balance = _games[tokenId].balance + msg.value;
+        _games[tokenId].bounty = _games[tokenId].bounty + msg.value;
+
+        ChessTableland._setBounty(_tablelandData, tokenId, _games[tokenId].bounty);
     }
 
     function concede(uint256 tokenId)
@@ -113,41 +160,60 @@ contract GameToken is ERC721, Ownable {
     {
         require(_games[tokenId].player1 > address(0), "game does not exist");
         require(_games[tokenId].player2 > address(0), "game does not exist");
+        require(_games[tokenId].winner == address(0), "game already has a winner");
         require(
             _games[tokenId].player1 == msg.sender || _games[tokenId].player2 == msg.sender,
             "sender must be a player"
         );
 
+        ChessTableland._concede(_tablelandData, tokenId);
+
+        _deactivatePlayerGame(tokenId, _games[tokenId].player1);
+        _deactivatePlayerGame(tokenId, _games[tokenId].player2);
+
         if (_games[tokenId].player1 == msg.sender) {
             _games[tokenId].winner = payable(_games[tokenId].player2);
-            _payWinner(tokenId);
         }
 
         if (_games[tokenId].player2 == msg.sender) {
             _games[tokenId].winner = payable(_games[tokenId].player1);
-            _payWinner(tokenId);
         }
     }
 
-    function setWinner(uint256 tokenId, address payable winner)
+    function setWinner(uint256 tokenId, address winner)
         public
     {
         require(_games[tokenId].player1 > address(0), "game does not exist");
         require(_games[tokenId].player2 > address(0), "game does not exist");
-        require(ownerOf(tokenId) == msg.sender, "sender must be owner");
-
+        require(ownerOf(tokenId) == msg.sender, "sender must be owner of game");
+        require(_games[tokenId].winner == address(0), "game already has a winner");
         require(
             _games[tokenId].player1 == winner || _games[tokenId].player2 == winner,
             "winner must be a player"
         );
 
-        _games[tokenId].winner = winner;
+        ChessTableland._setWinner(_tablelandData, tokenId, winner);
 
         _deactivatePlayerGame(tokenId, _games[tokenId].player1);
         _deactivatePlayerGame(tokenId, _games[tokenId].player2);
 
-        _payWinner(tokenId);
+        _games[tokenId].winner = payable(winner);
     }
+
+    // use the pattern where the winner claims the bounty
+    function claimBounty(uint256 tokenId)
+        public
+    {
+        require(_games[tokenId].winner != address(0), "cannot payout until there is a winner");
+        require(_games[tokenId].winner == payable(msg.sender), "cannot claim unless you are the payable(winner)");
+        require(_games[tokenId].bounty > 0, "there is no bounty for this game");
+
+        uint256 bounty = _games[tokenId].bounty;
+        // set zero first to avoid reentrancy
+        _games[tokenId].bounty = 0;
+        payable(msg.sender).transfer(bounty);
+    }
+
 
     // Remove the `tokenId` game from this player's list of games
     function _deactivatePlayerGame(uint256 tokenId, address player)
@@ -165,9 +231,7 @@ contract GameToken is ERC721, Ownable {
         // Loop through the existing games and put all but tokenId into the new array
         uint256 nextInsert = 0;
         for (uint256 i = 0; i < _playerGames[player].length; i++) {
-            console.log("Player Games Length", playerGames.length);
             if (_playerGames[player][i] >= 0 && _playerGames[player][i] != tokenId) {
-                console.log("I ", i);
                 // Note: push is not allowed in this context, so we manage position with `nextInsert`
                 playerGames[nextInsert] = _playerGames[player][i];
                 nextInsert++;
@@ -199,39 +263,4 @@ contract GameToken is ERC721, Ownable {
     {
         return _playerGames[player].length;
     }
-
-    function _payWinner(uint256 tokenId)
-        private
-    {
-        require(_games[tokenId].winner != address(0), "cannot payout until there is a winner");
-        uint balance = _games[tokenId].balance;
-        _games[tokenId].balance = 0;
-
-        if (balance > 0) {
-            // TODO: there is a potential security risk here if winner is a contract. Using send
-            //       and transfer aren't recommended because of gas cost and changes in Istanbul
-            (bool paid, ) = _games[tokenId].winner.call{value: balance}("");
-            if (!paid) {
-                _games[tokenId].balance = balance;
-            }
-        }
-    }
-
-    function _addressToString(address x) internal pure returns (string memory) {
-        bytes memory s = new bytes(40);
-        for (uint i = 0; i < 20; i++) {
-            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
-            bytes1 hi = bytes1(uint8(b) / 16);
-            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
-            s[2*i] = char(hi);
-            s[2*i+1] = char(lo);
-        }
-        return string(s);
-    }
-
-    function char(bytes1 b) internal pure returns (bytes1 c) {
-        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
-        else return bytes1(uint8(b) + 0x57);
-    }
-
 }

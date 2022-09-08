@@ -246,6 +246,17 @@
     this.blackCanCastleShort = params.blackCanCastleShort || true
   };
 
+  Board.prototype.reset = function () {
+    this.pieceSpace = getInitialState(),
+    this.history = [],
+    this.turn = 'white',
+    this.palyerInCheck = false,
+    this.whiteCanCastleLong = true,
+    this.whiteCanCastleShort = true,
+    this.blackCanCastleLong = true,
+    this.blackCanCastleShort = true
+  };
+
   Board.prototype.doMove = function (piece, from, to, promoted) {
     const color = this.getPieceColor(piece);
     const pieceName = this.getPieceName(piece);
@@ -684,7 +695,11 @@
     return i;
   }
 
-  // TODO: need a way to deal with pawns making it to the back line
+  function stringToNumber(str) {
+    const num = parseInt(str, 10);
+    if (isNaN(num)) return;
+    return num;
+  }
 
 </script>
 
@@ -702,39 +717,46 @@
     Modal,
     ModalBody,
     ModalActions,
-    Radio
+    Radio,
+    Spinner
   } from '@specialdoom/proi-ui';
   // The store is custom which means svelte will inject all exports as a variable with a `$` prefix
   import {
     alerts,
     audience,
+    blackAddress,
+    bounty,
     connected,
+    currentGame,
     gameId,
     games,
+    owner,
+    ownedGames,
     init,
     moves,
     myAddress,
-    myColor
+    myColor,
+    officialWinner,
+    whiteAddress
   } from './store';
 
-  onMount(function () {
-    const token = localStorage.getItem('tableland.token');
-    if (token) connect();
-  });
-
   const gameBoard = new Board();
+  let autoPlay;
 
-  const connect = async function () {
-    // do lookup here so that this function can be an event listener and called directly without worrying about arity
-    const token = localStorage.getItem('tableland.token');
-
+  onMount(async function () {
     moves.subscribe(async mvs => {
+      if (mvs.length === 0) {
+        gameBoard.reset();
+        trigger();
+        return;
+      }
+
       for (let i = Number(gameBoard.history.length); i < mvs.length; i++) {
         const moveStr = mvs[i];
         const parts = moveStr.split(':');
         const piece = parts[0];
-        const from = parts[1].split(',');
-        const to = parts[2].split(',');
+        const from = parts[1].split(',').map(stringToNumber);
+        const to = parts[2].split(',').map(stringToNumber);
         const promoted = parts[3]
 
         if (!(piece && from && to)) {
@@ -749,54 +771,117 @@
       }
     });
 
-    await init(token);
+    const params = new URLSearchParams(location.search);
+    autoPlay = !!params.get('auto');
+
+    if (autoPlay) {
+      await games.getGameMoves(params.get('game'));
+      games.startAutoPlay();
+    }
+  })
+
+  const connect = async function () {
+    await init();
     await games.findGames();
   };
 
+  const loadGame = async function (game) {
+    newGame = false;
+    winner = '';
+    await games.loadGame(game.id, game.player2, game.player1);
+  };
+  const unloadGame = function () {
+    games.unloadGame();
+  }
+
   const logout = function () {
-    localStorage.setItem('tableland.token', '');
     location.reload();
   };
 
-  let newOpponentAddress = '';
-  let newGameId = '';
-  $: validChallenge = function () {
-    try {
-      // make sure the wallet address is valid
-      newOpponentAddress = utils.getAddress(newOpponentAddress)
-    } catch (err) {
-      return false;
-    }
+  let newPlayer1Address = '';
+  let newPlayer2Address = '';
+  let minting = false;
+  let newGame;
+  let bountyGame;
+  let newBounty;
+  let addingBounty = false;
 
-    // make sure game id is valid
-    const gameId = newGameId && newGameId.trim()
-    if (!gameId || gameId.length > 20) return false;
-
-    // make sure they chose what color piece to play
-    if (colorChoice !== 'black' && colorChoice !== 'white') return false;
-
-    return true;
-  };
-  const challenge = function () {
-    if (!validChallenge()) return;
-
-    const params = new URLSearchParams();
-    params.set('black', colorChoice === 'black' ? $myAddress : newOpponentAddress);
-    params.set('white', colorChoice === 'white' ? $myAddress : newOpponentAddress);
-    params.set('game', newGameId);
-
-    newOpponentAddress = '';
-    newGameId = '';
-
-    challengeAlert = `${location.pathname}?${params.toString()}`;
-  };
-
-  let challengeAlert;
-  let colorChoice;
+  // vars for promoting pawns that make the backline
   let showPromoteModal = false;
   let promoteColor;
 
   let winner;
+
+  $: validMint = function () {
+    try {
+      // make sure the wallet address is valid
+      newPlayer1Address = utils.getAddress(newPlayer1Address);
+      newPlayer2Address = utils.getAddress(newPlayer2Address);
+    } catch (err) {
+      return false;
+    }
+
+    return true;
+  };
+  $: validBounty = function () {
+    if (newBounty && newBounty > 0) return true;
+
+    return false;
+  };
+  $: canAddBounty = function (game) {
+    if (game.player2 === game.owner) return false;
+    if (game.player1 === game.owner) return false;
+    return true;
+  };
+
+  const mint = async function () {
+    if (!validMint()) return;
+
+    minting = true;
+    try {
+      const gameId = await games.mintGame({
+        player1: newPlayer1Address,
+        player2: newPlayer2Address
+      });
+
+      // if there is no gameId something went wrong
+      if (!gameId) {
+        minting = false;
+        return;
+      }
+
+      newGame = {
+        id: gameId.toNumber(),
+        player1: newPlayer1Address.toString(),
+        player2: newPlayer2Address.toString()
+      };
+
+      newPlayer1Address = '';
+      newPlayer2Address = '';
+    } catch (err) {
+      minting = false;
+      console.log(err);
+    }
+    minting = false;
+  };
+
+  // if game arg is provided we will reload that
+  // game after bounty transaction is finished
+  const addBounty = async function (game) {
+    addingBounty = true;
+    await games.addBounty(bountyGame, newBounty);
+    if (game) {
+      await loadGame(game);
+    }
+    newBounty = undefined;
+    bountyGame = undefined;
+    addingBounty = false;
+  };
+
+  const certifyWinner = async function (gameId) {
+    await games.certifyWinner(gameId, winner);
+  };
+
   let pieceSpace = gameBoard.pieceSpace
   let history = gameBoard.history;
   let turn = gameBoard.turn;
@@ -824,8 +909,8 @@
   async function dropPiece(eve) {
     eve.preventDefault();
     if (winner) return;
-    const moveTo = eve.currentTarget.dataset.location.split(',').map(str => parseInt(str, 10));
-    const moveFrom = eve.dataTransfer.getData('location').split(',').map(str => parseInt(str, 10));
+    const moveTo = eve.currentTarget.dataset.location.split(',').map(stringToNumber);
+    const moveFrom = eve.dataTransfer.getData('location').split(',').map(stringToNumber);
     const piece = eve.dataTransfer.getData('piece');
 
     // something went wrong in the event cycle, so we bail
@@ -981,91 +1066,156 @@
 </script>
 
 <main class="relative">
+  {#if autoPlay}
+    <div class="flex items-start mt-8">
+      <div class="chessboard">
 
-  {#if challengeAlert}
-  <Modal bind:visible={challengeAlert} title="Challenge!">
+        {#each pieceSpace as row, rowIndex}
+        {#each row as square, squareIndex}
 
-    <ModalBody>
-      Here's the link to
-      <a href="{challengeAlert}" class="hover:underline text-blue-300 text-ellipsis overflow-hidden">
-        your game
-      </a>.
-      You can share this with the opponent who controls the Wallet Address you specified and start playing!
-      Once you make your first move the game will be visible in your list of games
-    </ModalBody>
+          <div
+            class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
+            on:dragover="{dragOver}"
+            on:drop="{dropPiece}"
+            on:dragstart="{pickupPiece}"
+            on:dragend="{putdownPiece}"
+            data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
+          >
+            {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
+          </div>
 
-  </Modal>
+        {/each}
+        {/each}
+
+      </div>
+    </div>
   {/if}
 
-  <Modal bind:visible={showPromoteModal} title="Choose Promotion">
+  {#if !autoPlay}
 
-    <ModalBody>
-      <div class="flex">
-        {#if promoteColor === 'black'}
-        <div
-          on:click="{() => promoter.promote('rook')}"
-          class="cursor-pointer px-4"
-        >rook &#9820;</div>
-        <div
-          on:click="{() => promoter.promote('knight')}"
-          class="cursor-pointer px-4"
-        >knight &#9822;</div>
-        <div
-          on:click="{() => promoter.promote('bishop')}"
-          class="cursor-pointer px-4"
-        >bishop &#9821;</div>
-        <div
-          on:click="{() => promoter.promote('queen')}"
-          class="cursor-pointer px-4"
-        >queen &#9819;</div>
-        {/if}
-        {#if promoteColor === 'white'}
-        <div
-          on:click="{() => promoter.promote('rook')}"
-          class="cursor-pointer px-4"
-        >rook &#9814;</div>
-        <div
-          on:click="{() => promoter.promote('knight')}"
-          class="cursor-pointer px-4"
-        >knight &#9816;</div>
-        <div
-          on:click="{() => promoter.promote('bishop')}"
-          class="cursor-pointer px-4"
-        >bishop &#9815;</div>
-        <div
-          on:click="{() => promoter.promote('queen')}"
-          class="cursor-pointer px-4"
-        >queen &#9813;</div>
-        {/if}
+    {#if newGame}
+    <Modal bind:visible={newGame} title="Your Game has been minted!">
+
+      <ModalBody>
+        Here's the link to
+        <span on:click="{() => loadGame(newGame)}" class="cursor-pointer hover:underline text-blue-300 text-ellipsis overflow-hidden">
+          your game
+        </span>.
+        Share this with the the Wallets of the players you specified.
+        You can now set a bounty on the game, which will be paid in full to the winner when you certify the game outcome.
+      </ModalBody>
+
+    </Modal>
+    {/if}
+
+    {#if bountyGame}
+    <Modal bind:visible={bountyGame} title="Add to the bounty">
+
+      <ModalBody>
+        Add to the bounty for this game
+        <div class="grid grid-cols-3">
+          <div class="col-span-2">
+            <Input placeholder="value in ETH" type="number" className="false" bind:value="{newBounty}" />
+          </div>
+          <div class="align-middle">
+            {#if addingBounty}
+            <Spinner label="Adding..." />
+            {/if}
+
+            {#if !addingBounty}
+            <Button type="primary" small on:click="{() => addBounty($currentGame)}" disabled="{!validBounty()}">
+              Submit
+            </Button>
+            {/if}
+          </div>
+        </div>
+
+        The bounty is paid in full, minus gas, to the winner of the game.
+        Note the winner must be certified on chain by the token owner, it is not automatically assigned by this client app.
+      </ModalBody>
+
+    </Modal>
+    {/if}
+
+    <Modal bind:visible={showPromoteModal} title="Choose Promotion">
+
+      <ModalBody>
+        <div class="flex">
+          {#if promoteColor === 'black'}
+          <div
+            on:click="{() => promoter.promote('rook')}"
+            class="cursor-pointer px-4"
+          >rook &#9820;</div>
+          <div
+            on:click="{() => promoter.promote('knight')}"
+            class="cursor-pointer px-4"
+          >knight &#9822;</div>
+          <div
+            on:click="{() => promoter.promote('bishop')}"
+            class="cursor-pointer px-4"
+          >bishop &#9821;</div>
+          <div
+            on:click="{() => promoter.promote('queen')}"
+            class="cursor-pointer px-4"
+          >queen &#9819;</div>
+          {/if}
+          {#if promoteColor === 'white'}
+          <div
+            on:click="{() => promoter.promote('rook')}"
+            class="cursor-pointer px-4"
+          >rook &#9814;</div>
+          <div
+            on:click="{() => promoter.promote('knight')}"
+            class="cursor-pointer px-4"
+          >knight &#9816;</div>
+          <div
+            on:click="{() => promoter.promote('bishop')}"
+            class="cursor-pointer px-4"
+          >bishop &#9815;</div>
+          <div
+            on:click="{() => promoter.promote('queen')}"
+            class="cursor-pointer px-4"
+          >queen &#9813;</div>
+          {/if}
+        </div>
+      </ModalBody>
+
+    </Modal>
+
+    <div class="fixed left-4 right-4">
+      {#each $alerts as alert}
+      <div on:click="{alerts.clearAlert(alert)}" class="cursor-pointer">
+        <Alert type="{alert.type}">{alert.message}</Alert>
       </div>
-    </ModalBody>
-
-  </Modal>
-
-  <div class="fixed left-4 right-4">
-    {#each $alerts as alert}
-    <div on:click="{alerts.clearAlert(alert)}" class="cursor-pointer">
-      <Alert type="{alert.type}">{alert.message}</Alert>
+      {/each}
     </div>
-    {/each}
-  </div>
-  <div class="text-center">
-    <div class="mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold">
-      <div class="col-span-5">
+    <div class="text-center">
+      <div class="mt-8 grid grid-cols-6 gap-4 text-3xl text-center font-mono font-semibold">
+        <div class="col-span-5">
 
-        <a href="?" class="hover:underline text-blue-300">Tableland Chess</a>
+          <span on:click="{unloadGame}" class="cursor-pointer hover:underline text-blue-300">Tableland Chess</span>
 
-        {#if $gameId}
+          {#if typeof $gameId === 'number'}
 
-          Game ID: {$gameId} -
+            Game ID: {$gameId}
 
-          {#if !winner}
-
-            {#if $audience}
+            {#if $audience && !$owner && !winner}
             <p class="text-sm">You are in the audience, if this is by mistake try loging out and reconnecting</p>
             {/if}
 
-            {#if !$audience}
+            {#if $owner}
+            <p class="text-sm">
+              You are the owner of this game.
+
+              {#if winner && $bounty && !$officialWinner}
+              <span on:click="{() => certifyWinner($gameId)}" class="cursor-pointer hover:underline text-blue-300">
+                Certify Winner
+              </span>
+              {/if}
+            </p>
+            {/if}
+
+            {#if $myColor && !winner}
               {#if  turn === $myColor}
               <b>Your Turn</b>
               {/if}
@@ -1077,123 +1227,177 @@
               {/if}
             {/if}
 
-          {/if}
+            {#if winner}
+            <h3>
+              Game Over
+              <span class="text-red">{winner} is the {$officialWinner ? 'certified' : ''} Winner!</span>
+            </h3>
+            {/if}
+            <p class="text-sm">White: {$whiteAddress}</p>
+            <p class="text-sm">Black: {$blackAddress}</p>
+            <p class="text-sm">
+              Game Bounty: {$currentGame.bounty && utils.formatEther($currentGame.bounty)}
+              {#if canAddBounty($currentGame)}
+              <span on:click="{() => bountyGame = $currentGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+                Add Bounty
+              </span>
+              {/if}
+            </p>
 
-          {#if winner}
-          <h3>
-            Game Over
-            <span class="text-red">{winner} is the Winner!</span>
-          </h3>
-          {/if}
+            {#if !canAddBounty($currentGame)}
+            <p class="text-xs text-gray-400">Cannot add bounty to this game because the owner is a player.</p>
+            {/if}
 
+            {#if $officialWinner}
+            <p class="text-sm">Certified Winner: {$officialWinner}</p>
+            {/if}
+          {/if}
+        </div>
+        {#if $myAddress}
+        <div class="text-sm text-center">
+          Connected with <b>{$myAddress.slice(0, 5)}...{$myAddress.slice(-5)}</b>
+          <span class="hover:underline cursor-pointer text-blue-300" on:click="{logout}">logout</span>
+        </div>
+        {/if}
+
+      </div>
+      
+    </div>
+    {#if !$connected}
+    <div class="container-center">
+      <button type="button" class="btn btn-connect cursor-pointer" on:click="{connect}">Connect To Tableland</button>
+    </div>
+    {/if}
+
+    {#if $connected}
+    <div class="flex items-start mt-8">
+
+      {#if typeof $gameId !== 'number'}
+      <div class="w-1/2 px-8 overflow-wrap">
+
+        <p class="font-bold">Games you are playing</p>
+        {#if $games.length}
+        {#each $games as game}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
+        <p class="truncate">
+          Game ID: <span on:click="{() => loadGame(game)}" class="pl-4 hover:underline cursor-pointer text-blue-300">{game.id}</span>
+        </p>
+        <p class="truncate">Game Bounty: {game.bounty && utils.formatEther(game.bounty)}</p>
+        <p class="truncate">Player 1: {game.player1}</p>
+        <p class="truncate">Player 2: {game.player2}</p>
+        {/each}
+        {/if}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
+
+        <p class="font-bold">Games you own</p>
+        {#if $ownedGames.length}
+        {#each $ownedGames as ownedGame}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
+        <p class="truncate">
+          Game ID:
+          <span on:click="{loadGame(ownedGame)}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+            {ownedGame.id}
+          </span>
+        </p>
+        <p class="truncate">
+          Game Bounty: {ownedGame.bounty && utils.formatEther(ownedGame.bounty)}
+          {#if !canAddBounty(ownedGame)}
+            <span class="text-xs text-gray-400">Cannot add bounty to this game because the owner is a player.</span>
+            {/if}
+          {#if canAddBounty(ownedGame)}
+          <span on:click="{() => bountyGame = ownedGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+            Add Bounty
+          </span>
+          {/if}
+        </p>
+        <p class="truncate">Player 1: {ownedGame.player1}</p>
+        <p class="truncate">Player 2: {ownedGame.player2}</p>
+        <p class="truncate">Winner: {ownedGame.winner}</p>
+        {/each}
+        {/if}
+        <p class="w-full border border-solid-bottom border-gray-300"></p>
+      </div>
+
+      <div class="w-1/2 px-8">
+        Mint a game
+        <Input label="Player 1 Address" bind:value="{newPlayer1Address}" />
+        <Input label="Player 2 Address" bind:value="{newPlayer2Address}" />
+
+        {#if minting}
+          <Spinner label="Minting..." />
+        {/if}
+        {#if !minting}
+        <Button type="primary" on:click="{mint}" disabled="{!validMint()}">
+          Mint
+        </Button>
         {/if}
       </div>
-      {#if $myAddress}
-      <div class="text-sm text-center">
-        Connected with <b>{$myAddress.slice(0, 5)}...{$myAddress.slice(-5)}</b>
-        <span class="hover:underline cursor-pointer text-blue-300" on:click="{logout}">logout</span>
+      {/if}
+
+      {#if typeof $gameId === 'number'}
+      <div class="chessboard">
+
+        {#each pieceSpace as row, rowIndex}
+        {#each row as square, squareIndex}
+
+          <div
+            class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'} relative"
+            on:dragover="{dragOver}"
+            on:drop="{dropPiece}"
+            on:dragstart="{pickupPiece}"
+            on:dragend="{putdownPiece}"
+            data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
+          >
+            {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
+          </div>
+
+        {/each}
+        {/each}
+
       </div>
-      {/if}
+      <div class="history">
+        {#if $myColor}
+        <h3>
+          You are playing as <b>{$myColor}</b>
+        </h3>
+        {/if}
 
-    </div>
-    
-  </div>
-  {#if !$connected}
-  <div class="container-center">
-    <button type="button" class="btn btn-connect cursor-pointer" on:click="{connect}">Connect To Tableland</button>
-  </div>
-  {/if}
+        <h3 class="w-64">Moves</h3>
 
-  {#if $connected}
-  <div class="flex items-start mt-8">
+        <div class="flex items-start">
+          <table class="move-table">
+            <tr>
+              <th></th>
+              <th>White</th>
+            </tr>
+            {#each history as move, i}
+            {#if !(i % 2)}
+            <tr>
+              <td>{1 + (i / 2)}</td>
+              <td>{move.notation}</td>
+            </tr>
+            {/if}
+            {/each}
+          </table>
 
-    {#if !$gameId}
-    <div class="w-96 pl-8">
-      {#if $games.length}
-      <p class="font-bold">Your Games</p>
-      {#each $games as game}
-        <a href="{game.link}" class="pl-4 hover:underline text-blue-300">{game.game_id}</a>
-        <br />
-      {/each}
-      {/if}
-    </div>
-
-    <div class="w-96">
-      Challenge someone!
-      <Input label="Opponent Address" bind:value="{newOpponentAddress}" />
-      <Input label="Game Id" bind:value="{newGameId}" placeholder="max 20 characters" />
-      <label class="block">Play as:</label>
-      {#each ['black', 'white'] as option}
-        <Radio value={option} bind:group={colorChoice}>{option}</Radio>
-        <br />
-      {/each}
-      <Button type="primary" on:click="{challenge}" disabled="{!validChallenge()}">Challenge</Button>
-    </div>
-    {/if}
-
-    {#if $gameId}
-    <div class="chessboard">
-
-      {#each pieceSpace as row, rowIndex}
-      {#each row as square, squareIndex}
-
-        <div
-          class="{((rowIndex % 2) + (squareIndex % 8)) % 2 ? 'black' : 'white'}"
-          on:dragover="{dragOver}"
-          on:drop="{dropPiece}"
-          on:dragstart="{pickupPiece}"
-          on:dragend="{putdownPiece}"
-          data-location="{colorTransform(rowIndex, $myColor)},{colorTransform(squareIndex, $myColor)}"
-        >
-          {@html pieceSpace[colorTransform(rowIndex, $myColor)][colorTransform(squareIndex, $myColor)] }
+          <table class="move-table">
+            <tr>
+              <th>Black</th>
+            </tr>
+            {#each history as move, i}
+            {#if i % 2}
+            <tr>
+              <td>{move.notation}</td>
+            </tr>
+            {/if}
+            {/each}
+          </table>
         </div>
 
-      {/each}
-      {/each}
-
-    </div>
-    <div class="history">
-      {#if !$audience}
-      <h3 class="max-w-sm">
-        You are playing as <b>{$myColor}</b>
-      </h3>
-      {/if}
-
-      <h3>Moves</h3>
-
-      <div class="flex items-start">
-        <table class="move-table">
-          <tr>
-            <th></th>
-            <th>White</th>
-          </tr>
-          {#each history as move, i}
-          {#if !(i % 2)}
-          <tr>
-            <td>{1 + (i / 2)}</td>
-            <td>{move.notation}</td>
-          </tr>
-          {/if}
-          {/each}
-        </table>
-
-        <table class="move-table">
-          <tr>
-            <th>Black</th>
-          </tr>
-          {#each history as move, i}
-          {#if i % 2}
-          <tr>
-            <td>{move.notation}</td>
-          </tr>
-          {/if}
-          {/each}
-        </table>
       </div>
-
+      {/if}
     </div>
     {/if}
-  </div>
   {/if}
 </main>
 
@@ -1233,7 +1437,6 @@
 
 .chessboard {
   width: 690px;
-  height: 690px;
   margin: 0 1rem;
   border: 25px solid #333;
 }
@@ -1248,12 +1451,31 @@
   border-top: 1px solid black;
 }
 
+@media (max-width: 700px) {
+  .black {
+    font-size: 6vw;
+  }
+
+  .white {
+    font-size: 6vw;
+  }
+}
+@media (min-width: 701px) {
+  .black {
+    font-size: 50px;
+  }
+
+  .white {
+    font-size: 50px;
+  }
+}
+
 .black {
   float: left;
-  width: 80px;
-  height: 80px;
+  width: 12.5%;
+  height: 0;
+  padding-bottom: 12.5%;
   background-color: #999;
-  font-size: 50px;
   text-align: center;
   display: table-cell;
   vertical-align: middle;
@@ -1261,10 +1483,10 @@
 
 .white {
   float: left;
-  width: 80px;
-  height: 80px;
+  width: 12.5%;
+  height: 0;
+  padding-bottom: 12.5%;
   background-color: #fff;
-  font-size:50px;
   text-align:center;
   display: table-cell;
   vertical-align:middle;

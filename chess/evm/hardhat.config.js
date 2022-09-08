@@ -1,3 +1,4 @@
+const { extendEnvironment } = require("hardhat/config");
 require("@nomiclabs/hardhat-waffle");
 const dotenv = require("dotenv");
 
@@ -79,5 +80,42 @@ module.exports = {
           ? [process.env.OPTIMISM_KOVAN_STAGING_PRIVATE_KEY]
           : [],
     }
+  },
+  baseURIs: {
+    // mainnets
+    ethereum: "https://tableland.network/query?s=",
+    optimism: "https://tableland.network/query?s=",
+    polygon: "https://tableland.network/query?s=",
+    // testnets
+    "ethereum-goerli": "https://testnet.tableland.network/query?s=",
+    "optimism-kovan": "https://testnet.tableland.network/query?s=",
+    "polygon-mumbai": "https://testnet.tableland.network/query?s=",
+    // devnets
+    "optimism-kovan-staging":
+      "https://staging.tableland.network/query?s=",
+    localhost: "http://localhost:8080/query?s=",
+  },
+  appURIs: {
+    // mainnets
+    ethereum: "fixme",
+    optimism: "fixme",
+    polygon: "fixme",
+    // testnets
+    "ethereum-goerli": "fixme",
+    "optimism-kovan": "fixme",
+    "polygon-mumbai": "https://d49bgqk3gxy9r.cloudfront.net/",
+    // devnets
+    "optimism-kovan-staging": "fixme",
+    localhost: "http://localhost:3000/",
   }
 };
+
+
+extendEnvironment(hre => {
+  // Get base URI for user-selected network
+  const baseUris = hre.userConfig.baseURIs;
+  hre.baseURI = baseUris[hre.network.name];
+
+  const appUris = hre.userConfig.appURIs;
+  hre.appURI = appUris[hre.network.name];
+});

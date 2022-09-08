@@ -3,9 +3,14 @@ import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
-import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
+import json from '@rollup/plugin-json';
 import css from 'rollup-plugin-css-only';
+import sveltePreprocess from 'svelte-preprocess';
+import replace from '@rollup/plugin-replace';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -50,6 +55,19 @@ export default {
     // a separate file - better for performance
     css({ output: 'bundle.css' }),
 
+    // Setup injecting things contained in the env
+    // Note: the injections are literal, so if you inject 'process.env.FOO': foo
+    //       with `const amIFoo = process.env.FOO;` in your app, then the result
+    //       will be `const amIFoo = foo`, notice that there's no quotes on foo
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.VALIDATOR_HOST': JSON.stringify(process.env.VALIDATOR_HOST),
+      'process.env.TABLELAND_NETWORK': JSON.stringify(process.env.TABLELAND_NETWORK),
+      'process.env.MOVES_TABLENAME': JSON.stringify(process.env.MOVES_TABLENAME),
+      'process.env.TOKEN_TABLENAME': JSON.stringify(process.env.TOKEN_TABLENAME),
+      'process.env.TOKEN_CONTRACT_ADDRESS': JSON.stringify(process.env.TOKEN_CONTRACT_ADDRESS)
+    }),
+
     // If you have external dependencies installed from
     // npm, you'll most likely need these plugins. In
     // some cases you'll need additional configuration -
@@ -61,9 +79,12 @@ export default {
     }),
     commonjs(),
     typescript({
+      resolveJsonModule: true,
       sourceMap: !production,
       inlineSources: !production
     }),
+
+    json(),
 
     // In dev mode, call `npm run start` once
     // the bundle has been generated
