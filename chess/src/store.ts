@@ -58,6 +58,7 @@ const parseResponse = function (data: {rows: any[], columns: {name: string}[]}) 
   });
 };
 
+export const currentGame = writable();
 export const gameId = writable('');
 export const whiteAddress = writable('');
 export const blackAddress = writable('');
@@ -200,9 +201,6 @@ export const games = {
       alerts.addAlert(err.message, 'error');
     }
   },
-  // TODO: active games should come from alchemy via `getPlayerGames(address)`, then games stored
-  //       in tableland that don't show up in those results are finished and we will want to get
-  //       them from the contract via `getGame(game_id)`
   findGames: async function (search?) {
     try {
       if (!_tableland) throw new Error('you must connect to Tableland before playing');
@@ -231,6 +229,7 @@ export const games = {
         const game = {
           player1: contractGame.player1,
           player2: contractGame.player2,
+          owner: ownerAddress,
           winner: contractGame.winner,
           bounty: contractGame.bounty,
           id: parseInt(gameId.toString(), 10),
@@ -245,39 +244,48 @@ export const games = {
 
       ownedGames.set(myOwnedGames);
 
+      // At this point we have all the games the user owns, both playing and not playing
+      // To get the games they are playing but don't own we will get all the moves they have made
+      // then collect the set of `game_id`s that aren't in the the ownedAndPlaying Array
+
       // TODO: paginate based on search arg
       const res = await _tableland.read(sqlStatements.myMoves());
       const myMoves = parseResponse(res);
 
-      const uniqueGames = myMoves.reduce(function (allGames, game) {
-        const exists = allGames.find(gameId => game.game_id === gameId);
-        if (typeof exists !== undefined) {
+      const uniqueGames = myMoves.reduce(function (allGames, move) {
+        const exists = allGames.find(gameId => move.game_id === gameId);
+        if (typeof exists !== 'undefined') {
+          // we already have the game_id in the Array
           return allGames;
         }
 
-        return allGames.concat([game.game_id]);
-      }, []);
-
-      const gamesRes = await _tableland.read(sqlStatements.getGames(uniqueGames));
-
-      const allMoves = parseResponse(gamesRes);
-      const games = uniqueGames.map(function (gameId) {
-        const whiteMove = allMoves.find(g => ~g.move.indexOf('white'));
-        const whiteAddress = whiteMove?.player_address;
-        const blackMove = allMoves.find(g => ~g.move.indexOf('black'));
-        const blackAddress = blackMove?.player_address;
-
-        if (!(whiteAddress && blackAddress)) {
-          return;
+        if (ownedAndPlaying.find(g => move.game_id === g.id)) {
+          // we already have the game_id in the ownedAndPlaying Array
+          return allGames;
         }
 
-        return {
+        // add the game_id to the Array
+        return allGames.concat([move.game_id]);
+      }, []);
+
+      // Now we collect all games this user is playing, owned and not owned,
+      // in one Writeable for the views to use as needed
+      const games = [];
+      for (let i = 0; i < uniqueGames.length; i++) {
+        const gameId = uniqueGames[i];
+
+        const contractGame = await tokenContract.getGame(gameId);
+
+        games.push({
           id: gameId,
-          link: `?game=${gameId}&white=${whiteAddress}&black=${blackAddress}`,
-          player1: whiteAddress,
-          player2: blackAddress
-        };
-      }).filter(g => g);
+          link: `?game=${gameId}&white=${contractGame.player1}&black=${contractGame.player2}`,
+          player1: contractGame.player1,
+          player2: contractGame.player2,
+          owner: contractGame.owner,
+          bounty: contractGame.bounty,
+          winner: contractGame.winner
+        });
+      }
 
       for (let i = 0; i < ownedAndPlaying.length; i++) {
         const game = ownedAndPlaying[i];
@@ -286,7 +294,10 @@ export const games = {
             id: game.id,
             link: `?game=${game.id}&white=${game.player1}&black=${game.player2}`,
             player1: game.player1,
-            player2: game.player2
+            player2: game.player2,
+            owner: game.owner,
+            bounty: game.bounty,
+            winner: game.winner
           });
         }
       }
@@ -314,6 +325,7 @@ export const games = {
       owner.set(_address === tokenOwner);
 
       const game = await tokenContract.getGame(BigNumber.from(loadGameId));
+      currentGame.set({id: loadGameId, owner: tokenOwner, ...game});
 
       if (_address === white || _address === black) {
         _opponentAddress = white === _address ? black : white;
@@ -386,6 +398,7 @@ export const games = {
     moves.unlistenForMoves();
     gameId.set('');
     setMoves([]);
+    currentGame.set(undefined);
     window.history.pushState({}, '', `${window.location.protocol}//${window.location.host}${window.location.pathname}`);
   },
   startAutoPlay: function () {

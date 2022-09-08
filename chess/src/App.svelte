@@ -727,6 +727,7 @@
     blackAddress,
     bounty,
     connected,
+    currentGame,
     gameId,
     games,
     owner,
@@ -800,6 +801,16 @@
   let newPlayer1Address = '';
   let newPlayer2Address = '';
   let minting = false;
+  let newGame;
+  let bountyGame;
+  let newBounty;
+  let addingBounty = false;
+
+  // vars for promoting pawns that make the backline
+  let showPromoteModal = false;
+  let promoteColor;
+
+  let winner;
 
   $: validMint = function () {
     try {
@@ -818,8 +829,8 @@
     return false;
   };
   $: canAddBounty = function (game) {
-    if (game.player2 === $myAddress) return false;
-    if (game.player1 === $myAddress) return false;
+    if (game.player2 === game.owner) return false;
+    if (game.player1 === game.owner) return false;
     return true;
   };
 
@@ -854,27 +865,23 @@
     minting = false;
   };
 
-  const addBounty = async function () {
+  // if game arg is provided we will reload that
+  // game after bounty transaction is finished
+  const addBounty = async function (game) {
+    addingBounty = true;
     await games.addBounty(bountyGame, newBounty);
+    if (game) {
+      await loadGame(game);
+    }
     newBounty = undefined;
     bountyGame = undefined;
-    settingBounty = false;
+    addingBounty = false;
   };
 
   const certifyWinner = async function (gameId) {
     await games.certifyWinner(gameId, winner);
   };
 
-  let newGame;
-  let bountyGame;
-  let newBounty;
-  let settingBounty = false;
-
-  // vars for promoting pawns that make the backline
-  let showPromoteModal = false;
-  let promoteColor;
-
-  let winner;
   let pieceSpace = gameBoard.pieceSpace
   let history = gameBoard.history;
   let turn = gameBoard.turn;
@@ -1111,12 +1118,12 @@
             <Input placeholder="value in ETH" type="number" className="false" bind:value="{newBounty}" />
           </div>
           <div class="align-middle">
-            {#if settingBounty}
+            {#if addingBounty}
             <Spinner label="Adding..." />
             {/if}
 
-            {#if !settingBounty}
-            <Button type="primary" small on:click="{addBounty}" disabled="{!validBounty()}">
+            {#if !addingBounty}
+            <Button type="primary" small on:click="{() => addBounty($currentGame)}" disabled="{!validBounty()}">
               Submit
             </Button>
             {/if}
@@ -1199,6 +1206,7 @@
             {#if $owner}
             <p class="text-sm">
               You are the owner of this game.
+
               {#if winner && $bounty && !$officialWinner}
               <span on:click="{() => certifyWinner($gameId)}" class="cursor-pointer hover:underline text-blue-300">
                 Certify Winner
@@ -1227,6 +1235,18 @@
             {/if}
             <p class="text-sm">White: {$whiteAddress}</p>
             <p class="text-sm">Black: {$blackAddress}</p>
+            <p class="text-sm">
+              Game Bounty: {$currentGame.bounty && utils.formatEther($currentGame.bounty)}
+              {#if canAddBounty($currentGame)}
+              <span on:click="{() => bountyGame = $currentGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
+                Add Bounty
+              </span>
+              {/if}
+            </p>
+
+            {#if !canAddBounty($currentGame)}
+            <p class="text-xs text-gray-400">Cannot add bounty to this game because the owner is a player.</p>
+            {/if}
 
             {#if $officialWinner}
             <p class="text-sm">Certified Winner: {$officialWinner}</p>
@@ -1281,6 +1301,9 @@
         </p>
         <p class="truncate">
           Game Bounty: {ownedGame.bounty && utils.formatEther(ownedGame.bounty)}
+          {#if !canAddBounty(ownedGame)}
+            <span class="text-xs text-gray-400">Cannot add bounty to this game because the owner is a player.</span>
+            {/if}
           {#if canAddBounty(ownedGame)}
           <span on:click="{() => bountyGame = ownedGame}" class="pl-4 cursor-pointer hover:underline text-blue-300">
             Add Bounty
