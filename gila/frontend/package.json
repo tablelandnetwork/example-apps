@@ -8,7 +8,7 @@
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^5.0.0-4",
     "@pinia/nuxt": "^0.1.8",
-    "@tableland/sdk": "^1.0.0",
+    "@tableland/sdk": "^3.0.0",
     "dotenv": "^16.0.0",
     "ethers": "^5.6.4",
     "nuxt": "npm:nuxt3@latest",

@@ -83,10 +83,11 @@ table.js Call connect after user clicks button, lib will handle not connecting i
 
 TODO: lib tracks token and app doesn't know about it
 3. Does a session token exist in browser storage?
-    1. NO: Create a local self-signed session token (JWT). This step requires the user to sign using Metamask.
+    1. NO: Create a local self-signed session token (signed and encoded SIWE message).
+           This step requires the user to sign using Metamask.
     2. YES: Go to next step.
 
-App does runSql('WHERE ...') to get all tables for this eth account
+App does runSql('... WHERE ...') to get all tables for this eth account
 if none prompt to make first one, if some let them choose and also allow making new ones
 4. Does the user already control some tables? Answer this question by querying the validator for all the tables controlled by their address. There is no need to read from the table registry contract. 
     1. NO: Present the user with a "setup your to-dos" button. Clicking the button should open Metamask and ask the user to confirm if they really want to mint a table from the registry.

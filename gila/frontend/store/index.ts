@@ -111,7 +111,7 @@ export const store = defineStore('$store', {
           
           myTweetsTable = await tableland.create(
             sqlStatements.schemaMyTweets(),
-            `${tablePrefixTweets}${addrTrunc(address)}`
+            { prefix: `${tablePrefixTweets}${addrTrunc(address)}` }
           );
         }
         if (!whoIFollowTable) {
@@ -122,7 +122,7 @@ export const store = defineStore('$store', {
 
           whoIFollowTable = await tableland.create(
             sqlStatements.schemaWhoIFollow(),
-            `${tablePrefixWIF}${addrTrunc(address)}`
+            { prefix: `${tablePrefixWIF}${addrTrunc(address)}` }
           );
         }
 

@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       validatorHost: process.env.VALIDATOR,
-      chain: process.env.CHAIN || 'ethereum-goerli',
+      chain: process.env.CHAIN || 'ethereum-goerli', // 'local-tableland',
       contract: process.env.CONTRACT || '',
       accountService: process.env.SERVICE || 'localhost:1337',
       alchemyApiKey: process.env.ALCHEMY || ''

@@ -10,30 +10,31 @@ const { Wallet, providers } = require('ethers');
 // Görli
 //const registryContractAddress = '0xa4b0729f02C6dB01ADe92d247b7425953d1DbA25';
 // Local
-//const registryContractAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-//const policyContractAddress = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
+const registryContractAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+const policyContractAddress = '0x8464135c8F25Da09e49BC8782676a84730C318bC';
 
 const go = async function () {
     try {
-        const [account] = await hre.ethers.getSigners();
+        const [account0, account1] = await hre.ethers.getSigners();
+        // public networks we use account 0 per the config
+        //const account = account0;
+        // using account 1 for hardhat since validator is using account 0
+        const account = account1;
 
         // WARN: uncomment connection per your network needs
         //const tableland = await connect({
           //signer: account,
           //chain: 'ethereum-goerli'
         //});
-        //const tableland = await connect({
-          //signer: account,
-          //chain: 'custom',
-          //contract: registryContractAddress,
-          //host: 'http://localhost:8080'
-        //});
-
+        const tableland = await connect({
+          signer: account,
+          chain: 'custom',
+          contract: registryContractAddress,
+          host: 'http://localhost:8080'
+        });
 
         const tableId = await create(tableland);
-
         await setController(tableId, account, account.address);
-
         await burnIt(tableId, account, account.address);
 
     } catch (err) {

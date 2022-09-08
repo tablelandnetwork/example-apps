@@ -26,11 +26,11 @@ export const state = function () {
 // store the tableland connection as a private plain Object
 const getConnection = function () {
   let connection: any;
-  return async function (options?: any) {
+  return async function () {
     if (connection) return connection;
 
     connection = await connect({
-      host: process.env.validatorHost as string
+      chain: process.env.tablelandChain as string
     });
 
     return connection;
@@ -64,9 +64,7 @@ export const actions: ActionTree<RootState, RootState> = {
     try {
       // connect to tableland
       console.log(`connecting to validator at: ${process.env.validatorHost}`);
-      const tableland = await getConnection({
-        host: process.env.validatorHost as string
-      });
+      const tableland = await getConnection();
 
       const myAddress = await tableland.signer.getAddress();
       const allTables = await tableland.list();
@@ -92,7 +90,9 @@ export const actions: ActionTree<RootState, RootState> = {
       const tableland = await getConnection();
 
       const listOwner = await tableland.signer.getAddress();
-      const listTable = await tableland.create(sql.createListTable(listOwner));
+      const listTable = await tableland.create(sql.createListTable(), {
+        prefix: `${listTablePrefix}_${listOwner.slice(2,10).toLowerCase()}`
+      });
 
       // store queryable list table name for later use
       context.commit('set', {key: 'listTableName', value: listTable.name});
@@ -107,13 +107,13 @@ export const actions: ActionTree<RootState, RootState> = {
       const tableName = 'todo_' + params.name.trim().replaceAll(' ', '_');
       const tableland = await getConnection();
 
-      const table = await tableland.create(sql.createList(tableName));
+      const table = await tableland.create(sql.createList(), { prefix: tableName });
       const queryableName = table.name as string;
 
       // stripping the id from queryable name
       const tableId = queryableName.split('_').pop() as string;
       const listOwner = await tableland.signer.getAddress();
-      const listTable = await tableland.query(sql.insertList({
+      const listTable = await tableland.write(sql.insertList({
         listTableName: context.state.listTableName,
         listName: listName,
         tableName: queryableName,
@@ -135,7 +135,7 @@ export const actions: ActionTree<RootState, RootState> = {
     try {
       const tableland = await getConnection();
       const listOwner = await tableland.signer.getAddress();
-      const listTable = await tableland.query(sql.selectListTable(context.state.listTableName)) as any;
+      const listTable = await tableland.read(sql.selectListTable(context.state.listTableName)) as any;
 
       if (!listTable.data) throw new Error('list table cannot be loaded');
 
@@ -148,7 +148,7 @@ export const actions: ActionTree<RootState, RootState> = {
     try {
       const tableland = await getConnection();
       const queryableName = `${params.name}`;
-      const res = await tableland.query(sql.selectTodoTable(queryableName)) as any;
+      const res = await tableland.read(sql.selectTodoTable(queryableName)) as any;
 
       const tasks = parseRpcResponse(res.data);
 
@@ -169,7 +169,7 @@ export const actions: ActionTree<RootState, RootState> = {
       const tableland = await getConnection();
 
       // send off async request to Tableland
-      const res = await tableland.query(sql.insertTask(context.state.currentQueryableName, task)) as any;
+      const res = await tableland.write(sql.insertTask(context.state.currentQueryableName, task)) as any;
 
       if (res.error) {
         console.log(res.error);
@@ -186,7 +186,7 @@ export const actions: ActionTree<RootState, RootState> = {
   updateTask: async function (context, task: Task) {
     try {
       const tableland = await getConnection();
-      const res = await tableland.query(sql.updateTask(context.state.currentQueryableName, task)) as any;
+      const res = await tableland.write(sql.updateTask(context.state.currentQueryableName, task)) as any;
 
       await context.dispatch('loadTable', {name: context.state.currentQueryableName});
     } catch (err) {
@@ -197,7 +197,7 @@ export const actions: ActionTree<RootState, RootState> = {
     try {
       const tableland = await getConnection();
 
-      const res = await tableland.query(sql.deleteTask(context.state.currentQueryableName, task.id)) as any;
+      const res = await tableland.write(sql.deleteTask(context.state.currentQueryableName, task.id)) as any;
 
       await context.dispatch('loadTable', {name: context.state.currentQueryableName});
     } catch (err) {
@@ -243,12 +243,12 @@ const listTablePrefix = 'todo_app_example_';
  *
  */
 const sql = {
-  createList: (name: string) => `CREATE TABLE ${name} (
+  createList: (name: string) => `
     complete BOOLEAN DEFAULT false,
     name     VARCHAR DEFAULT '',
     deleted  BOOLEAN DEFAULT false,
     id       INTEGER UNIQUE
-  );`,
+  ;`,
   deleteTask: (name: string, taskId: number) => `
     UPDATE ${name} SET deleted = true WHERE id = ${taskId};
   `,
@@ -271,12 +271,12 @@ const sql = {
   insertTask: (tableName: string, task: {complete: boolean, name: string, id: number}) => `
     INSERT INTO ${tableName} (complete, name, id) VALUES (${task.complete}, '${task.name}', ${task.id});
   `,
-  createListTable: (controllerAddress: string) => `CREATE TABLE ${listTablePrefix}_${controllerAddress.slice(2,10).toLowerCase()} (
+  createListTable: () => `
     list_name TEXT,
     table_name TEXT,
     table_id TEXT,
     table_controller TEXT
-  );`,
+  `,
   selectListTable: (listTableName: string) => `SELECT * FROM ${listTableName};`,
   selectTodoTable: (name: string) => `SELECT * FROM ${name} ORDER BY id ASC;`,
   updateTask: (name: string, task: {complete: boolean, name: string, id: number}) => `
